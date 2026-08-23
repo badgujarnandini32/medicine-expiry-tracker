@@ -7,36 +7,46 @@
             <title>MEDICINE EXPIRY TRACKER</title> 
          </head>
                   <body>
+                    <div>
                     <h1>Medicine Expiry Tracker</h1> 
                        <p>
                          <label>Medicine Name</label>
                         <input 
                         type="text"
+                        id="medicineName"
                         placeholder="Medicine Name"
                         ></p>
                         <p>
                             <label>Batch Number</label>
                             <input 
                             type="text"
+                            id="batchNumber"
                             ></p>
                         <p>
                             <label>Manufacturing Date</label>
                             <input 
                             type="date"
+                            id="manufacturingDate"
                             >
                         </p>
                        <p> <label>Expiry Date</label>
                         <input
-                        type="date">
+                        type="date"
+                        id="expiryDate"
+>
                         </p>
                         <p>
                             <label>Quantity</label>
                             <input
                             type="number"
+                            id="quantity"
                             >
                         </p>
                         <p>
-                            <button>Add Medicine</button>
+                            <button id="addMedicine">Add Medicine</button>
                         </p>
+                    </div>
+                    <div id="medicineList"></div>
+                    <script src="script.js"></script>
                  </body>
      </html>         
