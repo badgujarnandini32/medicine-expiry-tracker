@@ -1,128 +1,647 @@
-h1 {
-    font-size: 32px;
-    color: #333;
-    align-items: center;
+:root {
+    --teal: #155e63;
+    --teal-dark: #104b50;
+    --text: #20343b;
+    --muted: #6d7d82;
+    --background: #f3f7f7;
+    --border: #141414;
+    --green: #24784f;
+    --orange: #b66d16;
+    --red: #b64040;
 }
-input{
-    width: 150px;
-    padding: 7px;
-    margin-bottom: 20px;
-    border-radius: 5px;
-    box-sizing: border-box;
-}
-button:hover{
-    background-color: green;
-    color: white;
-    padding: 10px 20px;
-    transition:         0.4em;
-    border-radius: 7px;
-    width: 100%;
-    font-size: 16px;
-    cursor: pointer;
-}
-div{
-    width: 400px;
-    padding: 20px;
-    background-color: rgb(126, 60, 130);
-    border: 10px solid #0c0b0b;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-body{
-    background-color: rgba(83, 126, 126, 0);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    border-radius: 10px;
 
-}
-label{
-    font-weight: bold;
-    display: block;
-    border-radius:6px;
-}
-body {
-    background-color: #f2f5f9;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    font-family: Arial, sans-serif;
-}
 * {
     box-sizing: border-box;
 }
-.status {
+
+body {
+    margin: 0;
+    color: var(--text);
+    background: var(--background);
+    font-family: "DM Sans", Arial, sans-serif;
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+.hidden {
+    display: none !important;
+}
+
+h1,
+h2,
+h3 {
+    margin-top: 0;
+    font-family: "Space Grotesk", Arial, sans-serif;
+}
+
+p {
+    color: var(--muted);
+}
+
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: #e5f0f0;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 40px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(25, 65, 70, 0.1);
+}
+
+.brand-mark {
+    width: 48px;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    background: var(--teal);
+    border-radius: 10px;
+    font-size: 26px;
     font-weight: bold;
 }
 
-.status.safe {
-    color: green;
+.brand-mark.small {
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+    font-size: 18px;
 }
 
-.status.expiring-soon {
-    color: orange;
+.eyebrow {
+    margin: 18px 0 8px;
+    color: var(--teal);
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.08em;
 }
 
-.status.expired {
-    color: red;
-}
-#medicineList {
-    margin-top: 30px;
+.login-card h1 {
+    margin-bottom: 8px;
+    font-size: 28px;
 }
 
-#medicineList > div {
-    padding: 20px;
-    margin-bottom: 15px;
-    border-radius: 10px;
-    border: 1px solid #ddd;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+.login-intro {
+    margin-bottom: 28px;
 }
 
-#medicineList h3 {
-    margin-top: 0;
-}
-
-#medicineList button {
-    padding: 8px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-.status {
+label {
+    display: block;
+    margin: 15px 0 7px;
+    font-size: 13px;
     font-weight: bold;
 }
 
+input,
+select {
+    width: 100%;
+    padding: 11px 12px;
+    color: var(--text);
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    outline: none;
+}
+
+input:focus,
+select:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 2px rgba(21, 94, 99, 0.12);
+}
+
+.password-wrap {
+    position: relative;
+}
+
+.password-wrap input {
+    padding-right: 60px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 7px;
+    right: 8px;
+    padding: 5px;
+    color: var(--teal);
+    background: none;
+    border: 0;
+    font-size: 12px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: normal;
+}
+
+.checkbox-label input {
+    width: auto;
+    accent-color: var(--teal);
+}
+
+.primary-button {
+    padding: 11px 17px;
+    color: white;
+    background: var(--teal);
+    border: 0;
+    border-radius: 7px;
+    font-weight: bold;
+}
+
+.primary-button:hover {
+    background: var(--teal-dark);
+}
+
+.login-button {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.account-switch {
+    margin: 18px 0 0;
+    text-align: center;
+    font-size: 13px;
+}
+
+.text-button {
+    padding: 0;
+    color: var(--teal);
+    background: none;
+    border: 0;
+    font-weight: bold;
+}
+
+.demo-note,
+.form-message {
+    margin: 16px 0 0;
+    font-size: 12px;
+    text-align: center;
+}
+
+.form-message {
+    color: var(--red);
+}
+
+.top-navbar {
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 12px 5%;
+    color: white;
+    background: var(--teal);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+    font-family: "Space Grotesk", Arial, sans-serif;
+    font-weight: bold;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.nav-item {
+    padding: 9px 12px;
+    color: #d9eeee;
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.nav-item:hover,
+.nav-item.active {
+    color: white;
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.dashboard-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 5%;
+}
+
+.dashboard-header,
+.welcome-section,
+.section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.dashboard-header {
+    margin-bottom: 28px;
+}
+
+.dashboard-header .eyebrow {
+    margin: 0 0 6px;
+}
+
+.dashboard-header h2 {
+    margin-bottom: 5px;
+}
+
+.dashboard-header p {
+    margin-bottom: 0;
+}
+
+.user-area {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 13px;
+}
+
+.avatar {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--teal);
+    background: #d9eeee;
+    border-radius: 50%;
+    font-weight: bold;
+}
+
+.welcome-section {
+    margin-bottom: 26px;
+    padding: 22px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.welcome-section h1 {
+    margin-bottom: 7px;
+    font-size: 23px;
+}
+
+.welcome-section p {
+    margin: 0;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 28px;
+}
+
+.summary-card {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 18px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(25, 65, 70, 0.04);
+}
+
+.card-icon {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.card-icon.blue {
+    color: #28668b;
+    background: #e2f0f7;
+}
+
+.card-icon.green {
+    color: var(--green);
+    background: #e1f2e8;
+}
+
+.card-icon.orange {
+    color: var(--orange);
+    background: #fff0d9;
+}
+
+.card-icon.red {
+    color: var(--red);
+    background: #fae4e4;
+}
+
+.summary-card span:not(.card-icon) {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.summary-card strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 24px;
+}
+
+.inventory-section {
+    overflow: hidden;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.section-heading {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.section-heading h2 {
+    margin-bottom: 5px;
+    font-size: 21px;
+}
+
+.section-heading p {
+    margin: 0;
+    font-size: 13px;
+}
+
+.list-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 250px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.search-box input {
+    padding: 9px 10px;
+    font-size: 12px;
+    font-weight: normal;
+}
+
+.list-controls select {
+    width: 130px;
+    padding: 9px;
+    font-size: 12px;
+}
+
+.medicine-table-wrap {
+    overflow-x: auto;
+}
+
+.medicine-table {
+    min-width: 700px;
+}
+
+.table-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1.3fr 0.8fr 1.1fr 55px;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 20px;
+    border-bottom: 1px solid #edf2f2;
+    font-size: 12px;
+}
+
+.table-row:last-child {
+    border-bottom: 0;
+}
+
+.table-header {
+    color: var(--muted);
+    background: #f9fbfb;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.medicine-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.medicine-icon {
+    width: 27px;
+    height: 27px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--teal);
+    background: #e3f1f1;
+    border-radius: 6px;
+}
+
+.muted,
+.date-stack small,
+.days-left {
+    color: var(--muted);
+}
+
+.date-stack b,
+.date-stack small,
+.days-left {
+    display: block;
+}
+
+.date-stack small,
+.days-left {
+    margin-top: 3px;
+    font-size: 10px;
+}
+
+.status {
+    display: inline-block;
+    padding: 4px 7px;
+    border-radius: 12px;
+    font-size: 10px;
+}
+
 .status.safe {
-    color: green;
+    color: var(--green);
+    background: #e1f2e8;
 }
 
 .status.expiring-soon {
-    color: orange;
+    color: var(--orange);
+    background: #fff0d9;
 }
 
 .status.expired {
-    color: red;
-}
-#medicineList {
-    margin-top: 30px;
+    color: var(--red);
+    background: #fae4e4;
 }
 
-#medicineList > div {
-    padding: 20px;
-    margin-bottom: 15px;
+.delete-button {
+    padding: 0;
+    color: var(--red);
+    background: none;
+    border: 0;
+    font-size: 11px;
+}
+
+.delete-button:hover {
+    text-decoration: underline;
+}
+
+.empty-state {
+    padding: 55px 20px;
+    text-align: center;
+}
+
+.empty-state h3 {
+    margin: 10px 0 5px;
+}
+
+.medicine-dialog {
+    width: min(92%, 560px);
+    padding: 25px;
+    border: 0;
     border-radius: 10px;
-    border: 1px solid #ddd;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 35px rgba(25, 65, 70, 0.25);
 }
 
-#medicineList h3 {
-    margin-top: 0;
+.medicine-dialog::backdrop {
+    background: rgba(20, 55, 60, 0.4);
 }
 
-#medicineList button {
-    padding: 8px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+.dialog-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dialog-heading h2 {
+    margin: 0;
+}
+
+.icon-button {
+    color: var(--muted);
+    background: none;
+    border: 0;
+    font-size: 22px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 15px;
+    margin-bottom: 22px;
+}
+
+.form-grid > div:last-child {
+    max-width: calc(50% - 8px);
+}
+
+@media (max-width: 760px) {
+    .top-navbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .nav-links {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .nav-item {
+        white-space: nowrap;
+    }
+
+    .dashboard-content {
+        padding: 24px 16px;
+    }
+
+    .dashboard-header,
+    .welcome-section,
+    .section-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .user-area {
+        justify-content: flex-start;
+    }
+
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .list-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .search-box,
+    .list-controls select {
+        width: 100%;
+    }
+}
+
+@media (max-width: 460px) {
+    .login-card {
+        padding: 30px 22px;
+    }
+
+    .summary-card {
+        padding: 13px 10px;
+    }
+
+    .summary-card strong {
+        font-size: 21px;
+    }
+
+    .summary-card span:not(.card-icon) {
+        font-size: 11px;
+    }
+
+    .welcome-section .primary-button {
+        width: 100%;
+    }
+
+    .form-grid {
+        display: block;
+    }
+
+    .form-grid > div:last-child {
+        max-width: none;
+    }
 }

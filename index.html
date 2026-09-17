@@ -1,52 +1,82 @@
- <!DOCTYPE html>
-     <html>
-          <head><link
-            rel="stylesheet"
-            href="style.css"
-            >
-            <title>MEDICINE EXPIRY TRACKER</title> 
-         </head>
-                  <body>
-                    <div>
-                    <h1>Medicine Expiry Tracker</h1> 
-                       <p>
-                         <label>Medicine Name</label>
-                        <input 
-                        type="text"
-                        id="medicineName"
-                        placeholder="Medicine Name"
-                        ></p>
-                        <p>
-                            <label>Batch Number</label>
-                            <input 
-                            type="text"
-                            id="batchNumber"
-                            ></p>
-                        <p>
-                            <label>Manufacturing Date</label>
-                            <input 
-                            type="date"
-                            id="manufacturingDate"
-                            >
-                        </p>
-                       <p> <label>Expiry Date</label>
-                        <input
-                        type="date"
-                        id="expiryDate"
->
-                        </p>
-                        <p>
-                            <label>Quantity</label>
-                            <input
-                            type="number"
-                            id="quantity"
-                            >
-                        </p>
-                        <p>
-                            <button id="addMedicine">Add Medicine</button>
-                        </p>
-                    </div>
-                    <div id="medicineList"></div>
-                    <script src="script.js"></script>
-                 </body>
-     </html>         
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medicine Expiry Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main id="loginPage" class="login-page">
+        <section id="createAccountCard" class="login-card">
+            <div class="brand-mark">+</div>
+            <p class="eyebrow">FIRST-TIME SETUP</p>
+            <h1>Create your account</h1>
+            <p class="login-intro">Set up your account to start tracking your medicine inventory.</p>
+            <form id="createAccountForm">
+                <label for="createAccountEmail">Email or username</label>
+                <input id="createAccountEmail" type="text" placeholder="you@example.com" autocomplete="username" required>
+                <label for="createAccountPassword">Password</label>
+                <input id="createAccountPassword" type="password" placeholder="Create a password" autocomplete="new-password" required>
+                <label for="confirmAccountPassword">Confirm password</label>
+                <input id="confirmAccountPassword" type="password" placeholder="Re-enter your password" autocomplete="new-password" required>
+                <button class="primary-button login-button" type="submit">Create account</button>
+                <p id="createAccountMessage" class="form-message" role="alert"></p>
+            </form>
+        </section>
+
+        <section id="loginCard" class="login-card hidden">
+            <div class="brand-mark">+</div>
+            <p class="eyebrow">MEDICINE MANAGEMENT</p>
+            <h1>Medicine Expiry Tracker</h1>
+            <p class="login-intro">Track your medicine stock and expiry dates in one place.</p>
+            <form id="loginForm">
+                <label for="loginEmail">Email or username</label>
+                <input id="loginEmail" type="text" placeholder="you@example.com" autocomplete="username" required>
+                <label for="loginPassword">Password</label>
+                <div class="password-wrap"><input id="loginPassword" type="password" placeholder="Enter your password" autocomplete="current-password" required><button id="togglePassword" class="password-toggle" type="button">Show</button></div>
+                <label class="checkbox-label"><input id="rememberMe" type="checkbox"> Remember me</label>
+                <button class="primary-button login-button" type="submit">Login</button>
+                <p id="loginMessage" class="form-message" role="alert"></p>
+            </form>
+            <p class="account-switch">Need an account? <button id="showCreateAccountButton" class="text-button" type="button">Create one</button></p>
+        </section>
+    </main>
+
+    <main id="dashboardPage" class="hidden">
+        <nav class="top-navbar">
+            <a class="brand" href="#dashboard"><span class="brand-mark small">+</span> Medicine Expiry Tracker</a>
+            <div class="nav-links">
+                <button class="nav-item active" data-view="dashboard">Dashboard</button>
+                <button class="nav-item" data-view="medicines">Medicines</button>
+                <button class="nav-item" data-action="add">Add Medicine</button>
+                <button id="logoutButton" class="nav-item">Logout</button>
+            </div>
+        </nav>
+
+        <section class="dashboard-content">
+            <header class="dashboard-header">
+                <div><p class="eyebrow">DASHBOARD</p><h2>Welcome to Medicine Expiry Tracker</h2><p>Keep your medicine inventory organised and up to date.</p></div>
+                <div class="user-area"><span id="profileInitial" class="avatar">U</span><strong id="profileName">User</strong></div>
+            </header>
+            <section class="welcome-section"><div><h1>Manage your medicines easily</h1><p>Check expiry dates, quantities, and medicine status at a glance.</p></div><button id="openAddMedicine" class="primary-button">+ Add Medicine</button></section>
+            <section class="summary-grid" aria-label="Medicine summary">
+                <article class="summary-card"><span class="card-icon blue">#</span><div><span>Total Medicines</span><strong id="totalCount">0</strong></div></article>
+                <article class="summary-card"><span class="card-icon green">Safe</span><div><span>Safe</span><strong id="safeCount">0</strong></div></article>
+                <article class="summary-card"><span class="card-icon orange">!</span><div><span>Expiring Soon</span><strong id="soonCount">0</strong></div></article>
+                <article class="summary-card"><span class="card-icon red">X</span><div><span>Expired</span><strong id="expiredCount">0</strong></div></article>
+            </section>
+            <section class="inventory-section">
+                <div class="section-heading"><div><h2>Medicine List</h2><p>Search or filter your saved medicines.</p></div><div class="list-controls"><label class="search-box" for="searchInput"><span>Search</span><input id="searchInput" type="search" placeholder="Name or batch number"></label><select id="statusFilter" aria-label="Filter medicines by status"><option value="All">All</option><option value="Safe">Safe</option><option value="Expiring Soon">Expiring Soon</option><option value="Expired">Expired</option></select></div></div>
+                <div id="medicineList" class="medicine-table-wrap"></div>
+            </section>
+        </section>
+    </main>
+
+    <dialog id="medicineDialog" class="medicine-dialog"><div class="dialog-heading"><h2>Add Medicine</h2><button id="closeDialog" class="icon-button" type="button" aria-label="Close">x</button></div><form id="medicineForm"><div class="form-grid"><div><label for="medicineName">Medicine Name</label><input type="text" id="medicineName" placeholder="e.g. Paracetamol" required></div><div><label for="batchNumber">Batch Number</label><input type="text" id="batchNumber" placeholder="e.g. BT-2048" required></div><div><label for="manufacturingDate">Manufacturing Date</label><input type="date" id="manufacturingDate" required></div><div><label for="shelfLifeYears">Expires After (years)</label><input type="number" id="shelfLifeYears" min="1" step="1" value="2" required></div><div><label for="expiryDate">Expiry Date (auto-filled)</label><input type="date" id="expiryDate" readonly required></div><div><label for="quantity">Quantity</label><input type="number" id="quantity" min="1" placeholder="0" required></div></div><button id="addMedicine" class="primary-button" type="submit">Save Medicine</button></form></dialog>
+    <script src="script.js"></script>
+</body>
+</html>
