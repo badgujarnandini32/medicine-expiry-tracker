@@ -4,6 +4,7 @@ const medicineList = $("#medicineList");
 let medicines = [];
 let activeFilter = "All";
 let authToken = localStorage.getItem("medicineTrackerToken") || "";
+let expiryDateWasEntered = false;
 
 async function apiRequest(path, options = {}) {
     const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -27,6 +28,8 @@ async function apiRequest(path, options = {}) {
 }
 
 function updateExpiryDate() {
+    if (expiryDateWasEntered) return;
+
     const manufacturingDate = $("#manufacturingDate").value;
     const shelfLifeYears = Number($("#shelfLifeYears").value);
     if (!manufacturingDate || !Number.isInteger(shelfLifeYears) || shelfLifeYears < 1) {
@@ -34,12 +37,18 @@ function updateExpiryDate() {
         return;
     }
 
-    const expiryDate = new Date(`${manufacturingDate}T00:00:00`);
-    expiryDate.setFullYear(expiryDate.getFullYear() + shelfLifeYears);
-    const year = expiryDate.getFullYear();
-    const month = String(expiryDate.getMonth() + 1).padStart(2, "0");
-    const day = String(expiryDate.getDate()).padStart(2, "0");
-    $("#expiryDate").value = `${year}-${month}-${day}`;
+    const [year, month, day] = manufacturingDate.split("-").map(Number);
+    const expiryYear = year + shelfLifeYears;
+    const expiry = new Date(Date.UTC(expiryYear, month - 1, day));
+    if (expiry.getUTCMonth() !== month - 1) {
+        expiry.setUTCDate(0);
+    }
+
+    $("#expiryDate").value = [
+        expiry.getUTCFullYear(),
+        String(expiry.getUTCMonth() + 1).padStart(2, "0"),
+        String(expiry.getUTCDate()).padStart(2, "0")
+    ].join("-");
 }
 
 function getDaysLeft(medicine) {
@@ -106,6 +115,7 @@ async function loadMedicines() {
 
 async function saveMedicine(event) {
     event.preventDefault();
+    updateExpiryDate();
 
     try {
         const payload = {
@@ -118,6 +128,7 @@ async function saveMedicine(event) {
 
         await apiRequest("/medicines", { method: "POST", body: JSON.stringify(payload) });
         event.target.reset();
+        expiryDateWasEntered = false;
         $("#medicineDialog").close();
         await loadMedicines();
     } catch (error) {
@@ -225,8 +236,11 @@ $("#loginEmail").value = localStorage.getItem("medicineTrackerRemembered") ? loc
 $("#openAddMedicine").addEventListener("click", () => $("#medicineDialog").showModal());
 $("#closeDialog").addEventListener("click", () => $("#medicineDialog").close());
 $("#medicineDialog").addEventListener("click", (event) => { if (event.target === $("#medicineDialog")) $("#medicineDialog").close(); });
-$("#manufacturingDate").addEventListener("change", updateExpiryDate);
+$("#manufacturingDate").addEventListener("input", updateExpiryDate);
 $("#shelfLifeYears").addEventListener("input", updateExpiryDate);
+$("#expiryDate").addEventListener("input", (event) => {
+    expiryDateWasEntered = Boolean(event.target.value);
+});
 $("#medicineForm").addEventListener("submit", saveMedicine);
 
 $("#medicineList").addEventListener("click", (event) => {
