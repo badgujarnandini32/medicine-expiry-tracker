@@ -20,7 +20,7 @@ const API_BASE_URL = (() => {
         return "http://localhost:3000/api";
     }
 
-    return "/api";
+    return "";
 })();
 const $ = (selector) => document.querySelector(selector);
 const medicineList = $("#medicineList");
@@ -29,7 +29,145 @@ let activeFilter = "All";
 let authToken = localStorage.getItem("medicineTrackerToken") || "";
 let expiryDateWasEntered = false;
 
+function normalizeUsername(value) {
+    const trimmed = String(value || "").trim();
+    if (!trimmed) return "";
+    const lower = trimmed.toLowerCase();
+    return lower.endsWith("@gmail.com") ? lower : `${lower}@gmail.com`;
+}
+
+function getUsersStore() {
+    try {
+        return JSON.parse(localStorage.getItem("medicineTrackerUsers") || "{}") || {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function saveUsersStore(users) {
+    localStorage.setItem("medicineTrackerUsers", JSON.stringify(users));
+}
+
+function getMedicinesStore() {
+    try {
+        return JSON.parse(localStorage.getItem("medicineTrackerMedicines") || "{}") || {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function saveMedicinesStore(store) {
+    localStorage.setItem("medicineTrackerMedicines", JSON.stringify(store));
+}
+
+function getCurrentUsername() {
+    return localStorage.getItem("medicineTrackerUser") || "";
+}
+
+function handleLocalApiRequest(path, options = {}) {
+    const method = (options.method || "GET").toUpperCase();
+    const body = options.body ? JSON.parse(options.body) : null;
+
+    if (path === "/signup") {
+        const username = normalizeUsername(body?.username);
+        const password = String(body?.password || "");
+
+        if (!username || !password) {
+            throw new Error("Username and password are required.");
+        }
+
+        const users = getUsersStore();
+        if (users[username]) {
+            throw new Error("User already exists.");
+        }
+
+        users[username] = { username, password };
+        saveUsersStore(users);
+        return { user: { username }, message: "Account created successfully." };
+    }
+
+    if (path === "/login") {
+        const username = normalizeUsername(body?.username);
+        const password = String(body?.password || "");
+
+        if (!username || !password) {
+            throw new Error("Username and password are required.");
+        }
+
+        const users = getUsersStore();
+        const userRecord = users[username];
+        if (!userRecord || userRecord.password !== password) {
+            throw new Error("Incorrect username or password.");
+        }
+
+        const token = `local-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+        localStorage.setItem("medicineTrackerUser", username);
+        localStorage.setItem("medicineTrackerToken", token);
+        return { token, user: { username } };
+    }
+
+    if (path === "/medicines") {
+        const username = getCurrentUsername();
+
+        if (!username) {
+            throw new Error("Missing token");
+        }
+
+        if (method === "GET") {
+            const medicinesStore = getMedicinesStore();
+            return (medicinesStore[username] || []).map((medicine) => ({
+                ...medicine,
+                id: String(medicine.id || `${medicine.name}-${medicine.batch}`)
+            }));
+        }
+
+        if (method === "POST") {
+            const medicine = {
+                ...body,
+                id: body?.id || `med-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                quantity: Number(body?.quantity || 0)
+            };
+
+            if (!medicine.name || !medicine.batch || !medicine.manufacturingDate || !medicine.expiryDate || medicine.quantity <= 0) {
+                throw new Error("All medicine fields are required.");
+            }
+
+            const store = getMedicinesStore();
+            const currentList = store[username] || [];
+            const existingIndex = currentList.findIndex((item) => item.id === medicine.id);
+            if (existingIndex >= 0) {
+                currentList[existingIndex] = medicine;
+            } else {
+                currentList.push(medicine);
+            }
+            store[username] = currentList;
+            saveMedicinesStore(store);
+            return medicine;
+        }
+    }
+
+    if (path.startsWith("/medicines/")) {
+        const username = getCurrentUsername();
+        if (!username) {
+            throw new Error("Missing token");
+        }
+
+        const medicineId = path.split("/medicines/", 2)[1];
+        const store = getMedicinesStore();
+        const items = store[username] || [];
+        store[username] = items.filter((medicine) => String(medicine.id) !== String(medicineId));
+        saveMedicinesStore(store);
+        return { message: "Medicine deleted successfully." };
+    }
+
+    throw new Error("Request failed.");
+}
+
 async function apiRequest(path, options = {}) {
+    if (!API_BASE_URL) {
+        return handleLocalApiRequest(path, options);
+    }
+
     const response = await fetch(`${API_BASE_URL}${path}`, {
         headers: {
             "Content-Type": "application/json",
