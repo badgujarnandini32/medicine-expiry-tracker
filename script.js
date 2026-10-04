@@ -1,4 +1,27 @@
-﻿const API_BASE_URL = "http://localhost:3000/api";
+﻿const getApiOverride = () => {
+    const match = window.location.search.match(/[?&]api=([^&]+)/);
+    if (!match) return "";
+
+    try {
+        return decodeURIComponent(match[1]).trim().replace(/\/+$/, "");
+    } catch (error) {
+        return match[1].trim().replace(/\/+$/, "");
+    }
+};
+
+const API_BASE_URL = (() => {
+    const configuredBase = (getApiOverride() || window.MEDICINE_API_BASE_URL || "").trim().replace(/\/+$/, "");
+
+    if (configuredBase) {
+        return `${configuredBase}/api`;
+    }
+
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+        return "http://localhost:3000/api";
+    }
+
+    return "/api";
+})();
 const $ = (selector) => document.querySelector(selector);
 const medicineList = $("#medicineList");
 let medicines = [];
