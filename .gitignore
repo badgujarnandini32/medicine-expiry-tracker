@@ -3,3 +3,4 @@ medicine-tracker.db
 medicine-tracker.db-shm
 medicine-tracker.db-wal
 data.json
+__pycache__/

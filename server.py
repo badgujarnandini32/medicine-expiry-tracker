@@ -279,6 +279,29 @@ class MedicineHandler(BaseHTTPRequestHandler):
         conn.close()
         self._send_json(200, {"message": "Medicine deleted successfully."})
 
+    def _serve_static_file(self, relative_path):
+        requested_path = BASE_DIR / relative_path
+        if requested_path.parent != BASE_DIR:
+            self._send_json(403, {"message": "Forbidden."})
+            return
+
+        if not requested_path.is_file():
+            self._send_json(404, {"message": "Not found."})
+            return
+
+        content = requested_path.read_bytes()
+        content_type = {
+            ".html": "text/html; charset=utf-8",
+            ".css": "text/css; charset=utf-8",
+            ".js": "text/javascript; charset=utf-8",
+        }.get(requested_path.suffix.lower(), "application/octet-stream")
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(content)))
+        self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+        self.wfile.write(content)
+
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/api/health":
@@ -290,6 +313,14 @@ class MedicineHandler(BaseHTTPRequestHandler):
             if username is None:
                 return
             self._handle_medicines_get(username)
+            return
+
+        if parsed.path == "/":
+            self._serve_static_file("index.html")
+            return
+
+        if parsed.path in {"/index.html", "/style.css", "/script.js"}:
+            self._serve_static_file(parsed.path.lstrip("/"))
             return
 
         self._send_json(404, {"message": "Not found."})

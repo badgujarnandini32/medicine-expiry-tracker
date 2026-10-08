@@ -1,31 +1,17 @@
- {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+{
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "chrome",
+            "name": "Start Medicine Tracker",
+            "type": "debugpy",
             "request": "launch",
-            "name": "Open index.html",
-            "file": "c:\\Users\\Shree\\Desktop\\Medicine Expiry traker\\index.html"
+            "module": "server",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
