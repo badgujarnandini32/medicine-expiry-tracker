@@ -1,24 +1,10 @@
 ﻿const $ = (selector) => document.querySelector(selector);
 
-const getApiOverride = () => {
-    const match = window.location.search.match(/[?&]api=([^&]+)/);
-
-    if (!match) return "";
-
-    try {
-        return decodeURIComponent(match[1]).trim().replace(/\/+$/, "");
-    } catch (error) {
-        return match[1].trim().replace(/\/+$/, "");
-    }
-};
+// =========================
+// API CONFIG
+// =========================
 
 const getApiBaseUrl = () => {
-    const override = getApiOverride();
-
-    if (override) {
-        return override.endsWith("/api") ? override : `${override}/api`;
-    }
-
     const configuredBase =
         window.MEDICINE_API_BASE_URL ||
         window.location.origin;
@@ -43,12 +29,20 @@ const API_BASE_URL = getApiBaseUrl();
 // =========================
 
 async function apiRequest(endpoint, options = {}) {
+    const token = localStorage.getItem("medicineTrackerToken");
+
+    const headers = {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+    };
+
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers: {
-            "Content-Type": "application/json",
-            ...(options.headers || {})
-        },
-        ...options
+        ...options,
+        headers
     });
 
     let data = null;
@@ -72,7 +66,7 @@ async function apiRequest(endpoint, options = {}) {
 
 
 // =========================
-// LOCAL STORAGE HELPERS
+// LOCAL STORAGE
 // =========================
 
 function getLocalMedicines() {
@@ -115,9 +109,10 @@ function calculateBestBeforeExpiry(manufacturingDate, months) {
 // =========================
 
 function updateExpiryFields() {
-    const selectedType = $(
-        'input[name="expiryType"]:checked'
-    )?.value;
+    const selectedType =
+        document.querySelector(
+            'input[name="expiryType"]:checked'
+        )?.value;
 
     const exactExpiryField = $("#exactExpiryField");
     const bestBeforeField = $("#bestBeforeField");
@@ -135,7 +130,7 @@ function updateExpiryFields() {
 
 
 // =========================
-// DATE / STATUS HELPERS
+// DATE / STATUS
 // =========================
 
 function getDaysLeft(expiryDate) {
@@ -154,7 +149,6 @@ function getDaysLeft(expiryDate) {
         difference / (1000 * 60 * 60 * 24)
     );
 }
-
 
 function getStatus(expiryDate) {
     const daysLeft = getDaysLeft(expiryDate);
@@ -219,6 +213,7 @@ function displayMedicines(medicines) {
         `;
 
         updateSummaryCards([]);
+
         return;
     }
 
@@ -240,35 +235,52 @@ function displayMedicines(medicines) {
             return `
                 <div class="medicine-card">
                     <div class="medicine-info">
+
                         <h3>${escapeHtml(medicine.name)}</h3>
 
                         <p>
                             <strong>Batch:</strong>
-                            ${escapeHtml(medicine.batchNumber || "-")}
+                            ${escapeHtml(
+                                medicine.batchNumber ||
+                                medicine.batch ||
+                                "-"
+                            )}
                         </p>
 
                         <p>
                             <strong>Company:</strong>
-                            ${escapeHtml(medicine.companyName || "-")}
+                            ${escapeHtml(
+                                medicine.companyName ||
+                                medicine.company ||
+                                "-"
+                            )}
                         </p>
 
                         <p>
                             <strong>Manufacturing Date:</strong>
-                            ${escapeHtml(medicine.manufacturingDate || "-")}
+                            ${escapeHtml(
+                                medicine.manufacturingDate || "-"
+                            )}
                         </p>
 
                         <p>
                             <strong>Expiry Date:</strong>
-                            ${escapeHtml(medicine.expiryDate || "-")}
+                            ${escapeHtml(
+                                medicine.expiryDate || "-"
+                            )}
                         </p>
 
                         <p>
                             <strong>Quantity:</strong>
-                            ${escapeHtml(medicine.quantity || "-")}
+                            ${escapeHtml(
+                                medicine.quantity || "-"
+                            )}
                         </p>
+
                     </div>
 
                     <div class="medicine-status">
+
                         <span class="status-badge ${status.className}">
                             ${status.text}
                         </span>
@@ -281,6 +293,7 @@ function displayMedicines(medicines) {
                         >
                             Delete
                         </button>
+
                     </div>
                 </div>
             `;
@@ -296,7 +309,7 @@ function displayMedicines(medicines) {
 // =========================
 
 function updateSummaryCards(medicines) {
-    const totalMedicines = medicines.length;
+    const total = medicines.length;
 
     const expired = medicines.filter(
         (medicine) =>
@@ -306,6 +319,7 @@ function updateSummaryCards(medicines) {
     const expiringSoon = medicines.filter(
         (medicine) => {
             const days = getDaysLeft(medicine.expiryDate);
+
             return days >= 0 && days <= 30;
         }
     ).length;
@@ -316,35 +330,31 @@ function updateSummaryCards(medicines) {
     ).length;
 
     const totalElement =
-        $("#totalMedicines") ||
         $("#totalCount");
 
-    const expiredElement =
-        $("#expiredMedicines") ||
-        $("#expiredCount");
-
-    const expiringElement =
-        $("#expiringSoon") ||
-        $("#expiringCount");
-
     const safeElement =
-        $("#safeMedicines") ||
         $("#safeCount");
 
+    const soonElement =
+        $("#soonCount");
+
+    const expiredElement =
+        $("#expiredCount");
+
     if (totalElement) {
-        totalElement.textContent = totalMedicines;
-    }
-
-    if (expiredElement) {
-        expiredElement.textContent = expired;
-    }
-
-    if (expiringElement) {
-        expiringElement.textContent = expiringSoon;
+        totalElement.textContent = total;
     }
 
     if (safeElement) {
         safeElement.textContent = safe;
+    }
+
+    if (soonElement) {
+        soonElement.textContent = expiringSoon;
+    }
+
+    if (expiredElement) {
+        expiredElement.textContent = expired;
     }
 }
 
@@ -362,15 +372,13 @@ async function loadMedicines() {
                 ? data
                 : data?.medicines || [];
 
-        localStorage.setItem(
-            "medicineTrackerMedicines",
-            JSON.stringify(medicines)
-        );
+        saveLocalMedicines(medicines);
 
         displayMedicines(medicines);
+
     } catch (error) {
         console.warn(
-            "Backend unavailable. Using local storage.",
+            "Could not load medicines:",
             error
         );
 
@@ -384,36 +392,43 @@ async function loadMedicines() {
 // =========================
 
 async function saveMedicine(medicine) {
-    const localMedicines = getLocalMedicines();
-
-    const newMedicine = {
-        ...medicine,
-        id:
-            medicine.id ||
-            Date.now().toString()
-    };
-
     try {
         const data = await apiRequest("/medicines", {
             method: "POST",
-            body: JSON.stringify(newMedicine)
+            body: JSON.stringify(medicine)
         });
 
         const savedMedicine =
-            data?.medicine || data || newMedicine;
+            data?.medicine ||
+            data ||
+            medicine;
 
-        localMedicines.push(savedMedicine);
-        saveLocalMedicines(localMedicines);
+        const medicines = getLocalMedicines();
+
+        medicines.push(savedMedicine);
+
+        saveLocalMedicines(medicines);
 
         return savedMedicine;
+
     } catch (error) {
         console.warn(
-            "Backend unavailable. Saving locally.",
+            "Could not save to backend. Saving locally.",
             error
         );
 
-        localMedicines.push(newMedicine);
-        saveLocalMedicines(localMedicines);
+        const medicines = getLocalMedicines();
+
+        const newMedicine = {
+            ...medicine,
+            id:
+                medicine.id ||
+                Date.now().toString()
+        };
+
+        medicines.push(newMedicine);
+
+        saveLocalMedicines(medicines);
 
         return newMedicine;
     }
@@ -429,37 +444,52 @@ async function deleteMedicine(id) {
         await apiRequest(`/medicines/${id}`, {
             method: "DELETE"
         });
+
     } catch (error) {
         console.warn(
-            "Could not delete from backend. Removing locally.",
+            "Could not delete from backend:",
             error
         );
     }
 
-    const medicines = getLocalMedicines().filter(
-        (medicine) =>
-            String(medicine.id) !== String(id)
-    );
+    const medicines =
+        getLocalMedicines().filter(
+            (medicine) =>
+                String(medicine.id) !== String(id)
+        );
 
     saveLocalMedicines(medicines);
 
-    await loadMedicines();
+    displayMedicines(medicines);
+
+    loadMedicines();
 }
 
 
 // =========================
-// LOGIN / DASHBOARD
+// DASHBOARD
 // =========================
 
 function showDashboard() {
-    $("#loginPage").classList.add("hidden");
-    $("#dashboardPage").classList.remove("hidden");
+    const loginPage = $("#loginPage");
+    const dashboardPage = $("#dashboardPage");
+
+    if (loginPage) {
+        loginPage.classList.add("hidden");
+    }
+
+    if (dashboardPage) {
+        dashboardPage.classList.remove("hidden");
+    }
 
     const savedUser =
         localStorage.getItem("medicineTrackerUser") ||
+        localStorage.getItem("medicineTrackerEmail") ||
         "there";
 
-    $("#profileName").textContent = savedUser;
+    if ($("#profileName")) {
+        $("#profileName").textContent = savedUser;
+    }
 
     if ($("#profileInitial")) {
         $("#profileInitial").textContent =
@@ -471,133 +501,36 @@ function showDashboard() {
 
 
 function showLogin() {
-    $("#dashboardPage").classList.add("hidden");
-    $("#loginPage").classList.remove("hidden");
-
-    const loginForm = $("#loginForm");
-
-    if (loginForm) {
-        loginForm.reset();
-    }
-}
-
-
-function showCreateAccount() {
+    const dashboardPage = $("#dashboardPage");
     const loginPage = $("#loginPage");
 
-    if (!loginPage) return;
+    if (dashboardPage) {
+        dashboardPage.classList.add("hidden");
+    }
 
-    loginPage.innerHTML = `
-        <div class="login-container">
-            <h1>Create Account</h1>
-
-            <form id="signupForm">
-                <div class="form-group">
-                    <label>Name</label>
-                    <input
-                        type="text"
-                        id="signupName"
-                        required
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label>Email</label>
-                    <input
-                        type="email"
-                        id="signupEmail"
-                        required
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label>Password</label>
-                    <input
-                        type="password"
-                        id="signupPassword"
-                        required
-                    >
-                </div>
-
-                <button type="submit">
-                    Create Account
-                </button>
-            </form>
-
-            <button
-                type="button"
-                id="backToLogin"
-            >
-                Back to Login
-            </button>
-        </div>
-    `;
-
-    $("#signupForm").addEventListener(
-        "submit",
-        handleSignup
-    );
-
-    $("#backToLogin").addEventListener(
-        "click",
-        () => location.reload()
-    );
+    if (loginPage) {
+        loginPage.classList.remove("hidden");
+    }
 }
 
 
 // =========================
-// SIGNUP
+// CREATE ACCOUNT
 // =========================
 
-async function handleSignup(event) {
-    event.preventDefault();
+function showCreateAccount() {
+    const createAccountCard =
+        $("#createAccountCard");
 
-    const name =
-        $("#signupName")?.value.trim();
+    const loginCard =
+        $("#loginCard");
 
-    const email =
-        $("#signupEmail")?.value.trim();
-
-    const password =
-        $("#signupPassword")?.value;
-
-    if (!name || !email || !password) {
-        alert("Please fill all fields.");
-        return;
+    if (createAccountCard) {
+        createAccountCard.classList.remove("hidden");
     }
 
-    try {
-        await apiRequest("/auth/signup", {
-            method: "POST",
-            body: JSON.stringify({
-                name,
-                email,
-                password
-            })
-        });
-
-        alert("Account created successfully.");
-
-        location.reload();
-    } catch (error) {
-        localStorage.setItem(
-            "medicineTrackerUser",
-            name
-        );
-
-        localStorage.setItem(
-            "medicineTrackerEmail",
-            email
-        );
-
-        localStorage.setItem(
-            "medicineTrackerPassword",
-            password
-        );
-
-        alert("Account created successfully.");
-
-        location.reload();
+    if (loginCard) {
+        loginCard.classList.add("hidden");
     }
 }
 
@@ -621,23 +554,29 @@ async function handleLogin(event) {
     }
 
     try {
-        const data = await apiRequest(
-            "/auth/login",
-            {
-                method: "POST",
-                body: JSON.stringify({
-                    email,
-                    password
-                })
-            }
-        );
+        const data = await apiRequest("/login", {
+            method: "POST",
+            body: JSON.stringify({
+                username: email,
+                password: password
+            })
+        });
 
-        const user =
-            data?.user || data;
+        const token =
+            data?.token;
+
+        if (!token) {
+            throw new Error("Login token was not received.");
+        }
+
+        localStorage.setItem(
+            "medicineTrackerToken",
+            token
+        );
 
         localStorage.setItem(
             "medicineTrackerUser",
-            user?.name || email
+            email
         );
 
         localStorage.setItem(
@@ -646,26 +585,88 @@ async function handleLogin(event) {
         );
 
         showDashboard();
+
     } catch (error) {
-        const savedEmail =
-            localStorage.getItem(
-                "medicineTrackerEmail"
-            );
+        console.error("Login failed:", error);
 
-        const savedPassword =
-            localStorage.getItem(
-                "medicineTrackerPassword"
-            );
+        alert(
+            error.message ||
+            "Invalid email or password."
+        );
+    }
+}
 
-        if (
-            email === savedEmail &&
-            password === savedPassword
-        ) {
-            showDashboard();
-        } else {
-            alert(
-                "Invalid email or password."
-            );
+
+// =========================
+// SIGNUP
+// =========================
+
+async function handleSignup(event) {
+    event.preventDefault();
+
+    const email =
+        $("#createAccountEmail")?.value.trim();
+
+    const password =
+        $("#createAccountPassword")?.value;
+
+    const confirmPassword =
+        $("#confirmAccountPassword")?.value;
+
+    const message =
+        $("#createAccountMessage");
+
+    if (!email || !password || !confirmPassword) {
+        if (message) {
+            message.textContent =
+                "Please fill all fields.";
+        }
+
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        if (message) {
+            message.textContent =
+                "Passwords do not match.";
+        }
+
+        return;
+    }
+
+    try {
+        await apiRequest("/signup", {
+            method: "POST",
+            body: JSON.stringify({
+                username: email,
+                password: password
+            })
+        });
+
+        if (message) {
+            message.textContent =
+                "Account created successfully. Please login.";
+        }
+
+        if ($("#createAccountForm")) {
+            $("#createAccountForm").reset();
+        }
+
+        if ($("#createAccountCard")) {
+            $("#createAccountCard").classList.add("hidden");
+        }
+
+        if ($("#loginCard")) {
+            $("#loginCard").classList.remove("hidden");
+        }
+
+    } catch (error) {
+        console.error("Signup failed:", error);
+
+        if (message) {
+            message.textContent =
+                error.message ||
+                "Could not create account.";
         }
     }
 }
@@ -677,6 +678,10 @@ async function handleLogin(event) {
 
 function logout() {
     localStorage.removeItem(
+        "medicineTrackerToken"
+    );
+
+    localStorage.removeItem(
         "medicineTrackerUser"
     );
 
@@ -684,16 +689,12 @@ function logout() {
         "medicineTrackerEmail"
     );
 
-    localStorage.removeItem(
-        "medicineTrackerPassword"
-    );
-
     showLogin();
 }
 
 
 // =========================
-// ADD MEDICINE DIALOG
+// MEDICINE DIALOG
 // =========================
 
 function openMedicineDialog() {
@@ -773,6 +774,7 @@ async function handleMedicineSubmit(event) {
             alert(
                 "Please enter the shelf life in months."
             );
+
             return;
         }
 
@@ -781,6 +783,7 @@ async function handleMedicineSubmit(event) {
                 manufacturingDate,
                 months
             );
+
     } else {
         expiryDate =
             $("#expiryDate")?.value;
@@ -789,6 +792,7 @@ async function handleMedicineSubmit(event) {
             alert(
                 "Please select an expiry date."
             );
+
             return;
         }
     }
@@ -799,17 +803,24 @@ async function handleMedicineSubmit(event) {
         companyName,
         manufacturingDate,
         expiryDate,
-        quantity,
-        expiryType
+        quantity: Number(quantity)
     };
 
-    await saveMedicine(medicine);
+    try {
+        await saveMedicine(medicine);
 
-    closeMedicineDialog();
+        closeMedicineDialog();
 
-    await loadMedicines();
+        await loadMedicines();
 
-    alert("Medicine added successfully.");
+        alert("Medicine added successfully.");
+
+    } catch (error) {
+        alert(
+            error.message ||
+            "Could not add medicine."
+        );
+    }
 }
 
 
@@ -818,29 +829,24 @@ async function handleMedicineSubmit(event) {
 // =========================
 
 function filterMedicines() {
-    const searchInput =
-        $("#searchInput");
-
-    const filterSelect =
-        $("#statusFilter");
-
     const searchText =
-        searchInput?.value
+        $("#searchInput")?.value
             .toLowerCase()
             .trim() || "";
 
     const selectedFilter =
-        filterSelect?.value || "all";
+        $("#statusFilter")?.value || "All";
 
     const medicines =
         getLocalMedicines();
 
     const filtered =
         medicines.filter((medicine) => {
+
             const searchableText = `
-                ${medicine.name}
-                ${medicine.batchNumber}
-                ${medicine.companyName}
+                ${medicine.name || ""}
+                ${medicine.batchNumber || medicine.batch || ""}
+                ${medicine.companyName || medicine.company || ""}
             `.toLowerCase();
 
             const matchesSearch =
@@ -853,21 +859,19 @@ function filterMedicines() {
 
             let matchesFilter = true;
 
-            if (selectedFilter === "expired") {
+            if (selectedFilter === "Expired") {
                 matchesFilter = days < 0;
             }
 
-            if (
-                selectedFilter ===
-                "expiring"
-            ) {
+            if (selectedFilter === "Expiring Soon") {
                 matchesFilter =
                     days >= 0 &&
                     days <= 30;
             }
 
-            if (selectedFilter === "safe") {
-                matchesFilter = days > 30;
+            if (selectedFilter === "Safe") {
+                matchesFilter =
+                    days > 30;
             }
 
             return (
@@ -900,12 +904,24 @@ document.addEventListener(
         }
 
 
-        // Create account
-        const createAccountButton =
-            $("#createAccountButton");
+        // Create Account
+        const createAccountForm =
+            $("#createAccountForm");
 
-        if (createAccountButton) {
-            createAccountButton.addEventListener(
+        if (createAccountForm) {
+            createAccountForm.addEventListener(
+                "submit",
+                handleSignup
+            );
+        }
+
+
+        // Show Create Account
+        const showCreateAccountButton =
+            $("#showCreateAccountButton");
+
+        if (showCreateAccountButton) {
+            showCreateAccountButton.addEventListener(
                 "click",
                 showCreateAccount
             );
@@ -924,10 +940,11 @@ document.addEventListener(
         }
 
 
-        // Add medicine buttons
+        // Add Medicine
         document.addEventListener(
             "click",
             (event) => {
+
                 const addButton =
                     event.target.closest(
                         '[data-action="add"]'
@@ -940,7 +957,19 @@ document.addEventListener(
         );
 
 
-        // Medicine form
+        // Welcome Add Medicine button
+        const openAddMedicine =
+            $("#openAddMedicine");
+
+        if (openAddMedicine) {
+            openAddMedicine.addEventListener(
+                "click",
+                openMedicineDialog
+            );
+        }
+
+
+        // Medicine Form
         const medicineForm =
             $("#medicineForm");
 
@@ -952,12 +981,13 @@ document.addEventListener(
         }
 
 
-        // Expiry type
+        // Expiry Type
         document
             .querySelectorAll(
                 'input[name="expiryType"]'
             )
             .forEach((radio) => {
+
                 radio.addEventListener(
                     "change",
                     updateExpiryFields
@@ -965,33 +995,35 @@ document.addEventListener(
             });
 
 
-        // Close dialog
-        const closeDialogButton =
-            $("#closeMedicineDialog");
+        // Close Dialog
+        const closeDialog =
+            $("#closeDialog");
 
-        if (closeDialogButton) {
-            closeDialogButton.addEventListener(
+        if (closeDialog) {
+            closeDialog.addEventListener(
                 "click",
                 closeMedicineDialog
             );
         }
 
 
-        const cancelMedicineButton =
+        // Cancel Medicine
+        const cancelMedicine =
             $("#cancelMedicine");
 
-        if (cancelMedicineButton) {
-            cancelMedicineButton.addEventListener(
+        if (cancelMedicine) {
+            cancelMedicine.addEventListener(
                 "click",
                 closeMedicineDialog
             );
         }
 
 
-        // Delete medicine
+        // Delete Medicine
         document.addEventListener(
             "click",
             (event) => {
+
                 const deleteButton =
                     event.target.closest(
                         ".delete-medicine"
@@ -1037,22 +1069,24 @@ document.addEventListener(
         }
 
 
-        // Navbar navigation
+        // Navbar
         document
             .querySelectorAll(".nav-item")
             .forEach((button) => {
+
                 button.addEventListener(
                     "click",
                     () => {
+
                         document
                             .querySelectorAll(
                                 ".nav-item"
                             )
-                            .forEach((item) =>
+                            .forEach((item) => {
                                 item.classList.remove(
                                     "active"
-                                )
-                            );
+                                );
+                            });
 
                         if (
                             !button.hasAttribute(
@@ -1070,13 +1104,13 @@ document.addEventListener(
             });
 
 
-        // Keep logged-in user on dashboard
-        const savedUser =
+        // Initial screen
+        const token =
             localStorage.getItem(
-                "medicineTrackerUser"
+                "medicineTrackerToken"
             );
 
-        if (savedUser) {
+        if (token) {
             showDashboard();
         } else {
             showLogin();

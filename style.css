@@ -826,7 +826,7 @@ select:focus {
         width: 100%;
     }
 }
-```
+  
 /* ================= DASHBOARD VISIBILITY FIX ================= */
 
 .dashboard-page,
@@ -916,4 +916,42 @@ select:focus {
 .nav-item.active {
     color: #ffffff !important;
     background: rgba(255, 255, 255, 0.15) !important;
+}
+.top-navbar .nav-links .nav-item {
+    color: #d9eeee !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: inline-flex !important;
+}
+
+.top-navbar .nav-links .nav-item.active {
+    color: #ffffff !important;
+}
+
+.top-navbar .nav-links .nav-item:hover {
+    color: #ffffff !important;
+}
+/* FINAL NAVBAR TEXT FIX */
+.top-navbar .nav-links {
+    position: relative;
+    z-index: 1000;
+}
+
+.top-navbar .nav-links .nav-item {
+    position: relative;
+    z-index: 1001;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: max-content;
+    height: auto !important;
+    line-height: normal !important;
+    font-family: "DM Sans", sans-serif !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    text-indent: 0 !important;
+    text-shadow: none !important;
+    overflow: visible !important;
 }
