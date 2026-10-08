@@ -528,244 +528,213 @@
 
     <!-- ================= ADD MEDICINE DIALOG ================= -->
 
-    <dialog
-        id="medicineDialog"
-        class="medicine-dialog"
-    >
+    <!-- ================= ADD MEDICINE DIALOG ================= -->
 
-        <div class="dialog-heading">
+<dialog id="medicineDialog" class="medicine-dialog">
 
-            <h2>
-                Add Medicine
-            </h2>
+    <div class="dialog-heading">
+        <h2>Add Medicine</h2>
 
-
-            <button
-                id="closeDialog"
-                class="icon-button"
-                type="button"
-                aria-label="Close"
-            >
-                ×
-            </button>
-
-        </div>
+        <button
+            id="closeDialog"
+            class="icon-button"
+            type="button"
+            aria-label="Close"
+        >
+            ×
+        </button>
+    </div>
 
 
+    <form id="medicineForm">
 
-        <form id="medicineForm">
+        <!-- TOP TWO-COLUMN FIELDS -->
 
-            <div class="form-grid">
+        <div class="form-grid">
 
-
-                <!-- MEDICINE NAME -->
-
-                <div>
-
-                    <label for="medicineName">
-                        Medicine Name *
-                    </label>
-
-                    <input
-                        type="text"
-                        id="medicineName"
-                        placeholder="e.g. Paracetamol"
-                        required
-                    >
-
-                </div>
-
-
-
-                <!-- BATCH NUMBER -->
-
-                <div>
-
-                    <label for="batchNumber">
-                        Batch Number *
-                    </label>
-
-                    <input
-                        type="text"
-                        id="batchNumber"
-                        placeholder="e.g. BT-2048"
-                        required
-                    >
-
-                </div>
-
-
-
-                <!-- COMPANY NAME -->
-
-                <div>
-
-                    <label for="companyName">
-                        Company Name *
-                    </label>
-
-                    <input
-                        type="text"
-                        id="companyName"
-                        placeholder="e.g. Cipla"
-                        required
-                    >
-
-                </div>
-
-
-
-                <!-- MANUFACTURING DATE -->
-
-                <div>
-
-                    <label for="manufacturingDate">
-                        Manufacturing Date *
-                    </label>
-
-                    <input
-                        type="date"
-                        id="manufacturingDate"
-                        required
-                    >
-
-                </div>
-
-            </div>
-
-
-
-            <!-- EXPIRY TYPE -->
-
-            <div class="expiry-type-section">
-
-                <label>
-                    Expiry Type *
+            <!-- Medicine Name -->
+            <div>
+                <label for="medicineName">
+                    Medicine Name *
                 </label>
 
-
-                <div class="expiry-options">
-
-
-                    <label class="radio-option">
-
-                        <input
-                            type="radio"
-                            name="expiryType"
-                            value="exact"
-                            checked
-                        >
-
-                        <span>
-                            Exact Expiry Date
-                        </span>
-
-                    </label>
-
-
-
-                    <label class="radio-option">
-
-                        <input
-                            type="radio"
-                            name="expiryType"
-                            value="bestBefore"
-                        >
-
-                        <span>
-                            Best Before (months)
-                        </span>
-
-                    </label>
-
-
-                </div>
-
+                <input
+                    type="text"
+                    id="medicineName"
+                    placeholder="e.g. Paracetamol"
+                    required
+                >
             </div>
 
 
+            <!-- Batch Number -->
+            <div>
+                <label for="batchNumber">
+                    Batch Number *
+                </label>
 
-            <!-- EXACT EXPIRY DATE -->
+                <input
+                    type="text"
+                    id="batchNumber"
+                    placeholder="e.g. BT-2048"
+                    required
+                >
+            </div>
 
-            <div
-                id="exactExpiryField"
-                class="expiry-field"
-            >
 
-                <label for="expiryDate">
-                    Expiry Date *
+            <!-- Company Name -->
+            <div>
+                <label for="companyName">
+                    Company Name *
+                </label>
+
+                <input
+                    type="text"
+                    id="companyName"
+                    placeholder="e.g. Cipla"
+                    required
+                >
+            </div>
+
+
+            <!-- Manufacturing Date -->
+            <div>
+                <label for="manufacturingDate">
+                    Manufacturing Date *
                 </label>
 
                 <input
                     type="date"
-                    id="expiryDate"
+                    id="manufacturingDate"
                     required
                 >
-
             </div>
 
+        </div>
 
 
-            <!-- BEST BEFORE -->
+        <!-- EXPIRY TYPE -->
 
-            <div
-                id="bestBeforeField"
-                class="expiry-field hidden"
-            >
+        <div class="expiry-type-section">
 
-                <label for="bestBeforeMonths">
-                    Best Before (months) *
+            <label>
+                Expiry Type *
+            </label>
+
+            <div class="expiry-options">
+
+                <label class="radio-option">
+
+                    <input
+                        type="radio"
+                        name="expiryType"
+                        value="exact"
+                        checked
+                    >
+
+                    <span>
+                        Exact Expiry Date
+                    </span>
+
                 </label>
 
-                <input
-                    type="number"
-                    id="bestBeforeMonths"
-                    min="1"
-                    step="1"
-                    placeholder="e.g. 24"
-                >
 
-                <small>
-                    Expiry date will be calculated automatically from the manufacturing date.
-                </small>
+                <label class="radio-option">
 
-            </div>
+                    <input
+                        type="radio"
+                        name="expiryType"
+                        value="bestBefore"
+                    >
 
+                    <span>
+                        Best Before (months)
+                    </span>
 
-
-            <!-- QUANTITY -->
-
-            <div class="quantity-field">
-
-                <label for="quantity">
-                    Quantity *
                 </label>
 
-                <input
-                    type="number"
-                    id="quantity"
-                    min="1"
-                    placeholder="0"
-                    required
-                >
-
             </div>
 
+        </div>
 
 
-            <!-- BUTTON -->
+        <!-- EXACT EXPIRY DATE -->
 
-            <button
-                id="addMedicine"
-                class="primary-button"
-                type="submit"
+        <div
+            id="exactExpiryField"
+            class="expiry-field"
+        >
+
+            <label for="expiryDate">
+                Expiry Date *
+            </label>
+
+            <input
+                type="date"
+                id="expiryDate"
             >
-                Add Medicine
-            </button>
 
-        </form>
+        </div>
 
-    </dialog>
+
+        <!-- BEST BEFORE -->
+
+        <div
+            id="bestBeforeField"
+            class="expiry-field hidden"
+        >
+
+            <label for="bestBeforeMonths">
+                Best Before (months) *
+            </label>
+
+            <input
+                type="number"
+                id="bestBeforeMonths"
+                min="1"
+                step="1"
+                placeholder="e.g. 24"
+            >
+
+            <small>
+                Expiry date will be calculated automatically from the manufacturing date.
+            </small>
+
+        </div>
+
+
+        <!-- QUANTITY -->
+
+        <div class="quantity-field">
+
+            <label for="quantity">
+                Quantity *
+            </label>
+
+            <input
+                type="number"
+                id="quantity"
+                min="1"
+                placeholder="0"
+                required
+            >
+
+        </div>
+
+
+        <!-- BUTTON -->
+
+        <button
+            id="addMedicine"
+            class="primary-button"
+            type="submit"
+        >
+            Add Medicine
+        </button>
+
+    </form>
+
+</dialog>
 
 
 

@@ -1,5 +1,6 @@
 ﻿const getApiOverride = () => {
     const match = window.location.search.match(/[?&]api=([^&]+)/);
+
     if (!match) return "";
 
     try {
@@ -8,6 +9,7 @@
         return match[1].trim().replace(/\/+$/, "");
     }
 };
+
 
 const API_BASE_URL = (() => {
     const configuredBase = (
@@ -30,18 +32,21 @@ const API_BASE_URL = (() => {
     return "";
 })();
 
+
 const $ = (selector) => document.querySelector(selector);
 
 const medicineList = $("#medicineList");
+
 let medicines = [];
 let activeFilter = "All";
-let authToken = localStorage.getItem("medicineTrackerToken") || "";
-let expiryDateWasEntered = false;
+
+let authToken =
+    localStorage.getItem("medicineTrackerToken") || "";
 
 
-// ===============================
+// =========================================================
 // USER FUNCTIONS
-// ===============================
+// =========================================================
 
 function normalizeUsername(value) {
     const trimmed = String(value || "").trim();
@@ -99,33 +104,44 @@ function getCurrentUsername() {
 }
 
 
-// ===============================
+// =========================================================
 // LOCAL API
-// ===============================
+// =========================================================
 
 function handleLocalApiRequest(path, options = {}) {
 
-    const method = (options.method || "GET").toUpperCase();
+    const method =
+        (options.method || "GET").toUpperCase();
 
     const body = options.body
         ? JSON.parse(options.body)
         : null;
 
 
+    // =========================
     // SIGN UP
+    // =========================
+
     if (path === "/signup") {
 
-        const username = normalizeUsername(body?.username);
-        const password = String(body?.password || "");
+        const username =
+            normalizeUsername(body?.username);
+
+        const password =
+            String(body?.password || "");
 
         if (!username || !password) {
-            throw new Error("Username and password are required.");
+            throw new Error(
+                "Username and password are required."
+            );
         }
 
         const users = getUsersStore();
 
         if (users[username]) {
-            throw new Error("User already exists.");
+            throw new Error(
+                "User already exists."
+            );
         }
 
         users[username] = {
@@ -142,26 +158,42 @@ function handleLocalApiRequest(path, options = {}) {
     }
 
 
+    // =========================
     // LOGIN
+    // =========================
+
     if (path === "/login") {
 
-        const username = normalizeUsername(body?.username);
-        const password = String(body?.password || "");
+        const username =
+            normalizeUsername(body?.username);
+
+        const password =
+            String(body?.password || "");
 
         if (!username || !password) {
-            throw new Error("Username and password are required.");
+            throw new Error(
+                "Username and password are required."
+            );
         }
 
         const users = getUsersStore();
 
-        const userRecord = users[username];
+        const userRecord =
+            users[username];
 
-        if (!userRecord || userRecord.password !== password) {
-            throw new Error("Incorrect username or password.");
+        if (
+            !userRecord ||
+            userRecord.password !== password
+        ) {
+            throw new Error(
+                "Incorrect username or password."
+            );
         }
 
         const token =
-            `local-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+            `local-${Math.random()
+                .toString(36)
+                .slice(2)}-${Date.now()}`;
 
         localStorage.setItem(
             "medicineTrackerUser",
@@ -180,38 +212,44 @@ function handleLocalApiRequest(path, options = {}) {
     }
 
 
+    // =========================
     // MEDICINES
+    // =========================
+
     if (path === "/medicines") {
 
-        const username = getCurrentUsername();
+        const username =
+            getCurrentUsername();
 
         if (!username) {
             throw new Error("Missing token");
         }
 
 
-        // GET
+        // GET MEDICINES
+
         if (method === "GET") {
 
-            const medicinesStore = getMedicinesStore();
+            const medicinesStore =
+                getMedicinesStore();
 
-            return (medicinesStore[username] || []).map(
-                (medicine) => ({
-                    ...medicine,
-                    id: String(
-                        medicine.id ||
-                        `${medicine.name}-${medicine.batch}`
-                    )
-                })
-            );
+            return (
+                medicinesStore[username] || []
+            ).map((medicine) => ({
+                ...medicine,
+                id: String(
+                    medicine.id ||
+                    `${medicine.name}-${medicine.batch}`
+                )
+            }));
         }
 
 
-        // POST
+        // ADD MEDICINE
+
         if (method === "POST") {
 
             const medicine = {
-
                 ...body,
 
                 id:
@@ -220,15 +258,15 @@ function handleLocalApiRequest(path, options = {}) {
                         .toString(16)
                         .slice(2)}`,
 
-                quantity: Number(
-                    body?.quantity || 0
-                )
+                quantity:
+                    Number(body?.quantity || 0)
             };
 
 
             if (
                 !medicine.name ||
                 !medicine.companyName ||
+                !medicine.batch ||
                 !medicine.manufacturingDate ||
                 !medicine.expiryDate ||
                 medicine.quantity <= 0
@@ -239,7 +277,8 @@ function handleLocalApiRequest(path, options = {}) {
             }
 
 
-            const store = getMedicinesStore();
+            const store =
+                getMedicinesStore();
 
             const currentList =
                 store[username] || [];
@@ -247,7 +286,8 @@ function handleLocalApiRequest(path, options = {}) {
 
             const existingIndex =
                 currentList.findIndex(
-                    (item) => item.id === medicine.id
+                    (item) =>
+                        item.id === medicine.id
                 );
 
 
@@ -263,7 +303,8 @@ function handleLocalApiRequest(path, options = {}) {
             }
 
 
-            store[username] = currentList;
+            store[username] =
+                currentList;
 
             saveMedicinesStore(store);
 
@@ -272,10 +313,14 @@ function handleLocalApiRequest(path, options = {}) {
     }
 
 
+    // =========================
     // DELETE MEDICINE
+    // =========================
+
     if (path.startsWith("/medicines/")) {
 
-        const username = getCurrentUsername();
+        const username =
+            getCurrentUsername();
 
         if (!username) {
             throw new Error("Missing token");
@@ -312,13 +357,14 @@ function handleLocalApiRequest(path, options = {}) {
 }
 
 
-// ===============================
+// =========================================================
 // API REQUEST
-// ===============================
+// =========================================================
 
 async function apiRequest(path, options = {}) {
 
     if (!API_BASE_URL) {
+
         return handleLocalApiRequest(
             path,
             options
@@ -326,26 +372,27 @@ async function apiRequest(path, options = {}) {
     }
 
 
-    const response = await fetch(
-        `${API_BASE_URL}${path}`,
-        {
-            headers: {
-                "Content-Type":
-                    "application/json",
+    const response =
+        await fetch(
+            `${API_BASE_URL}${path}`,
+            {
+                headers: {
+                    "Content-Type":
+                        "application/json",
 
-                ...(authToken
-                    ? {
-                        Authorization:
-                            `Bearer ${authToken}`
-                    }
-                    : {}),
+                    ...(authToken
+                        ? {
+                            Authorization:
+                                `Bearer ${authToken}`
+                        }
+                        : {}),
 
-                ...(options.headers || {})
-            },
+                    ...(options.headers || {})
+                },
 
-            ...options
-        }
-    );
+                ...options
+            }
+        );
 
 
     const contentType =
@@ -380,9 +427,9 @@ async function apiRequest(path, options = {}) {
 }
 
 
-// ===============================
+// =========================================================
 // EXPIRY CALCULATION
-// ===============================
+// =========================================================
 
 function calculateBestBeforeExpiry() {
 
@@ -443,6 +490,9 @@ function calculateBestBeforeExpiry() {
 }
 
 
+// =========================================================
+// EXPIRY TYPE
+// =========================================================
 
 function updateExpiryFields() {
 
@@ -467,50 +517,42 @@ function updateExpiryFields() {
 
     if (expiryType === "bestBefore") {
 
-        exactField?.classList.add(
-            "hidden"
-        );
+        exactField.classList.add("hidden");
 
-        bestBeforeField?.classList.remove(
-            "hidden"
-        );
+        bestBeforeField.classList.remove("hidden");
 
 
-        if (expiryDate) {
-            expiryDate.required = false;
-        }
+        expiryDate.required = false;
+
+        bestBeforeMonths.required = true;
 
 
-        if (bestBeforeMonths) {
-            bestBeforeMonths.required = true;
+        // Calculate immediately if values already exist
+        if (
+            $("#manufacturingDate").value &&
+            bestBeforeMonths.value
+        ) {
+            expiryDate.value =
+                calculateBestBeforeExpiry();
         }
 
     } else {
 
-        exactField?.classList.remove(
-            "hidden"
-        );
+        exactField.classList.remove("hidden");
 
-        bestBeforeField?.classList.add(
-            "hidden"
-        );
+        bestBeforeField.classList.add("hidden");
 
 
-        if (expiryDate) {
-            expiryDate.required = true;
-        }
+        expiryDate.required = true;
 
-
-        if (bestBeforeMonths) {
-            bestBeforeMonths.required = false;
-        }
+        bestBeforeMonths.required = false;
     }
 }
 
 
-// ===============================
+// =========================================================
 // MEDICINE STATUS
-// ===============================
+// =========================================================
 
 function getDaysLeft(medicine) {
 
@@ -537,7 +579,6 @@ function getDaysLeft(medicine) {
 }
 
 
-
 function getStatus(daysLeft) {
 
     if (daysLeft < 0)
@@ -550,9 +591,9 @@ function getStatus(daysLeft) {
 }
 
 
-// ===============================
+// =========================================================
 // SECURITY
-// ===============================
+// =========================================================
 
 function escapeHtml(value) {
 
@@ -569,9 +610,9 @@ function escapeHtml(value) {
 }
 
 
-// ===============================
+// =========================================================
 // DISPLAY MEDICINES
-// ===============================
+// =========================================================
 
 function displayMedicines() {
 
@@ -584,7 +625,6 @@ function displayMedicines() {
 
     const filtered =
         medicines
-
             .map(
                 (medicine, index) => ({
                     medicine,
@@ -593,7 +633,6 @@ function displayMedicines() {
                         getDaysLeft(medicine)
                 })
             )
-
             .filter(
                 ({
                     medicine,
@@ -613,9 +652,7 @@ function displayMedicines() {
                         (medicine.name || "")
                             .toLowerCase()
                             .includes(searchTerm)
-
                         ||
-
                         (medicine.batch || "")
                             .toLowerCase()
                             .includes(searchTerm);
@@ -628,6 +665,8 @@ function displayMedicines() {
                 }
             );
 
+
+    // Summary counts
 
     $("#totalCount").textContent =
         medicines.length;
@@ -660,12 +699,16 @@ function displayMedicines() {
         ).length;
 
 
+    // Empty state
+
     if (!filtered.length) {
 
         medicineList.innerHTML = `
             <div class="empty-state">
                 <span>~</span>
+
                 <h3>No medicines found</h3>
+
                 <p>
                     Add a medicine or adjust
                     your search and filters.
@@ -676,6 +719,8 @@ function displayMedicines() {
         return;
     }
 
+
+    // Medicine table
 
     medicineList.innerHTML = `
         <div class="medicine-table">
@@ -719,9 +764,13 @@ function displayMedicines() {
                         <div class="table-row">
 
                             <div class="medicine-name">
-                                <span class="medicine-icon">+</span>
+
+                                <span class="medicine-icon">
+                                    +
+                                </span>
 
                                 <div>
+
                                     <strong>
                                         ${escapeHtml(
                                             medicine.name
@@ -733,7 +782,9 @@ function displayMedicines() {
                                             medicine.companyName || ""
                                         )}
                                     </small>
+
                                 </div>
+
                             </div>
 
 
@@ -745,6 +796,7 @@ function displayMedicines() {
 
 
                             <span class="date-stack">
+
                                 <b>
                                     ${escapeHtml(
                                         medicine.expiryDate
@@ -757,6 +809,7 @@ function displayMedicines() {
                                         medicine.manufacturingDate
                                     )}
                                 </small>
+
                             </span>
 
 
@@ -769,6 +822,7 @@ function displayMedicines() {
 
 
                             <span>
+
                                 <b class="status ${statusClass}">
                                     ${status}
                                 </b>
@@ -776,17 +830,16 @@ function displayMedicines() {
                                 <small class="days-left">
                                     ${daysLabel}
                                 </small>
+
                             </span>
 
 
                             <button
                                 class="delete-button"
                                 data-id="${medicine.id || index}"
-                                aria-label="Delete ${
-                                    escapeHtml(
-                                        medicine.name
-                                    )
-                                }"
+                                aria-label="Delete ${escapeHtml(
+                                    medicine.name
+                                )}"
                             >
                                 Delete
                             </button>
@@ -801,9 +854,9 @@ function displayMedicines() {
 }
 
 
-// ===============================
+// =========================================================
 // LOAD MEDICINES
-// ===============================
+// =========================================================
 
 async function loadMedicines() {
 
@@ -828,18 +881,16 @@ async function loadMedicines() {
 
     } catch (error) {
 
-        $("#loginMessage")
-            .textContent =
-            error.message;
+        console.error(error);
 
         logout();
     }
 }
 
 
-// ===============================
+// =========================================================
 // SAVE MEDICINE
-// ===============================
+// =========================================================
 
 async function saveMedicine(event) {
 
@@ -866,16 +917,44 @@ async function saveMedicine(event) {
         );
 
 
-    const expiryDate =
-        expiryType === "bestBefore"
-            ? calculateBestBeforeExpiry()
-            : exactExpiryDate;
+    let expiryDate;
 
+
+    if (expiryType === "bestBefore") {
+
+        expiryDate =
+            calculateBestBeforeExpiry();
+
+    } else {
+
+        expiryDate =
+            exactExpiryDate;
+    }
+
+
+    // Validation
 
     if (!manufacturingDate) {
 
-        $("#loginMessage").textContent =
-            "Manufacturing date is required.";
+        alert(
+            "Manufacturing date is required."
+        );
+
+        return;
+    }
+
+
+    if (
+        expiryType === "bestBefore" &&
+        (
+            !Number.isInteger(bestBeforeMonths) ||
+            bestBeforeMonths < 1
+        )
+    ) {
+
+        alert(
+            "Enter the best-before period in months."
+        );
 
         return;
     }
@@ -883,10 +962,11 @@ async function saveMedicine(event) {
 
     if (!expiryDate) {
 
-        $("#loginMessage").textContent =
+        alert(
             expiryType === "bestBefore"
                 ? "Enter the best-before period in months."
-                : "Enter the expiry date.";
+                : "Enter the expiry date."
+        );
 
         return;
     }
@@ -935,18 +1015,17 @@ async function saveMedicine(event) {
                 method: "POST",
 
                 body:
-                    JSON.stringify(
-                        payload
-                    )
+                    JSON.stringify(payload)
             }
         );
 
 
+        // Reset form
+
         event.target.reset();
 
-        expiryDateWasEntered =
-            false;
 
+        // Restore exact expiry mode
 
         const exactRadio =
             document.querySelector(
@@ -962,23 +1041,27 @@ async function saveMedicine(event) {
         updateExpiryFields();
 
 
+        // Close dialog
+
         $("#medicineDialog").close();
 
+
+        // Reload medicines
 
         await loadMedicines();
 
     } catch (error) {
 
-        $("#loginMessage")
-            .textContent =
-            error.message;
+        console.error(error);
+
+        alert(error.message);
     }
 }
 
 
-// ===============================
+// =========================================================
 // DELETE MEDICINE
-// ===============================
+// =========================================================
 
 async function deleteMedicine(medicineId) {
 
@@ -996,16 +1079,16 @@ async function deleteMedicine(medicineId) {
 
     } catch (error) {
 
-        $("#loginMessage")
-            .textContent =
-            error.message;
+        console.error(error);
+
+        alert(error.message);
     }
 }
 
 
-// ===============================
+// =========================================================
 // DASHBOARD
-// ===============================
+// =========================================================
 
 function showDashboard() {
 
@@ -1041,7 +1124,6 @@ function showDashboard() {
 }
 
 
-
 function showLogin() {
 
     $("#createAccountCard")
@@ -1059,7 +1141,6 @@ function showLogin() {
 }
 
 
-
 function showCreateAccount() {
 
     $("#loginCard")
@@ -1075,7 +1156,6 @@ function showCreateAccount() {
     $("#createAccountMessage")
         .textContent = "";
 }
-
 
 
 function logout() {
@@ -1113,9 +1193,9 @@ function logout() {
 }
 
 
-// ===============================
+// =========================================================
 // CREATE ACCOUNT
-// ===============================
+// =========================================================
 
 $("#createAccountForm")
     .addEventListener(
@@ -1136,10 +1216,14 @@ $("#createAccountForm")
                     .value;
 
 
+            const confirmPassword =
+                $("#confirmAccountPassword")
+                    .value;
+
+
             if (
                 password !==
-                $("#confirmAccountPassword")
-                    .value
+                confirmPassword
             ) {
 
                 $("#createAccountMessage")
@@ -1190,9 +1274,9 @@ $("#createAccountForm")
     );
 
 
-// ===============================
+// =========================================================
 // LOGIN
-// ===============================
+// =========================================================
 
 $("#loginForm")
     .addEventListener(
@@ -1260,6 +1344,12 @@ $("#loginForm")
                         "medicineTrackerRemembered",
                         "true"
                     );
+
+                } else {
+
+                    localStorage.removeItem(
+                        "medicineTrackerRemembered"
+                    );
                 }
 
 
@@ -1275,9 +1365,9 @@ $("#loginForm")
     );
 
 
-// ===============================
+// =========================================================
 // UI EVENTS
-// ===============================
+// =========================================================
 
 $("#showCreateAccountButton")
     .addEventListener(
@@ -1314,6 +1404,8 @@ $("#togglePassword")
     );
 
 
+// Remembered email
+
 $("#loginEmail").value =
     localStorage.getItem(
         "medicineTrackerRemembered"
@@ -1324,21 +1416,31 @@ $("#loginEmail").value =
         : "";
 
 
+// =========================================================
+// ADD MEDICINE DIALOG
+// =========================================================
+
 $("#openAddMedicine")
     .addEventListener(
         "click",
-        () =>
+        () => {
+
+            updateExpiryFields();
+
             $("#medicineDialog")
-                .showModal()
+                .showModal();
+        }
     );
 
 
 $("#closeDialog")
     .addEventListener(
         "click",
-        () =>
+        () => {
+
             $("#medicineDialog")
-                .close()
+                .close();
+        }
     );
 
 
@@ -1351,6 +1453,7 @@ $("#medicineDialog")
                 event.target ===
                 $("#medicineDialog")
             ) {
+
                 $("#medicineDialog")
                     .close();
             }
@@ -1358,7 +1461,10 @@ $("#medicineDialog")
     );
 
 
+// =========================================================
 // EXPIRY TYPE
+// =========================================================
+
 document
     .querySelectorAll(
         'input[name="expiryType"]'
@@ -1374,18 +1480,65 @@ document
     );
 
 
-$("#expiryDate")
+// Manufacturing date changes
+
+$("#manufacturingDate")
     .addEventListener(
         "input",
-        (event) => {
+        () => {
 
-            expiryDateWasEntered =
-                Boolean(
-                    event.target.value
-                );
+            const expiryType =
+                document.querySelector(
+                    'input[name="expiryType"]:checked'
+                )?.value;
+
+
+            if (
+                expiryType === "bestBefore"
+            ) {
+
+                const calculated =
+                    calculateBestBeforeExpiry();
+
+                if (calculated) {
+                    $("#expiryDate").value =
+                        calculated;
+                }
+            }
         }
     );
 
+
+// Best-before months changes
+
+$("#bestBeforeMonths")
+    .addEventListener(
+        "input",
+        () => {
+
+            const expiryType =
+                document.querySelector(
+                    'input[name="expiryType"]:checked'
+                )?.value;
+
+
+            if (
+                expiryType === "bestBefore"
+            ) {
+
+                const calculated =
+                    calculateBestBeforeExpiry();
+
+                if (calculated) {
+                    $("#expiryDate").value =
+                        calculated;
+                }
+            }
+        }
+    );
+
+
+// Submit form
 
 $("#medicineForm")
     .addEventListener(
@@ -1394,7 +1547,10 @@ $("#medicineForm")
     );
 
 
+// =========================================================
 // DELETE
+// =========================================================
+
 $("#medicineList")
     .addEventListener(
         "click",
@@ -1416,7 +1572,10 @@ $("#medicineList")
     );
 
 
+// =========================================================
 // SEARCH
+// =========================================================
+
 $("#searchInput")
     .addEventListener(
         "input",
@@ -1424,7 +1583,10 @@ $("#searchInput")
     );
 
 
+// =========================================================
 // FILTER
+// =========================================================
+
 $("#statusFilter")
     .addEventListener(
         "change",
@@ -1438,12 +1600,20 @@ $("#statusFilter")
     );
 
 
+// =========================================================
+// LOGOUT
+// =========================================================
+
 $("#logoutButton")
     .addEventListener(
         "click",
-        () => logout()
+        logout
     );
 
+
+// =========================================================
+// NAVBAR ADD MEDICINE
+// =========================================================
 
 document
     .querySelectorAll(
@@ -1454,15 +1624,22 @@ document
 
             button.addEventListener(
                 "click",
-                () =>
+                () => {
+
+                    updateExpiryFields();
+
                     $("#medicineDialog")
-                        .showModal()
+                        .showModal();
+                }
             );
         }
     );
 
 
+// =========================================================
 // INITIALIZE
+// =========================================================
+
 updateExpiryFields();
 
 
