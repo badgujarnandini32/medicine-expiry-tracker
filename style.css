@@ -956,8 +956,12 @@ select:focus {
     overflow: visible !important;
 }
 .top-navbar .nav-item {
-    color: red !important;
     background: yellow !important;
+    color: red !important;
+    -webkit-text-fill-color: red !important;
     font-size: 20px !important;
     font-weight: 700 !important;
+    text-indent: 0 !important;
+    line-height:  normal !important;
+    letter-spacing: normal !important;
 }
