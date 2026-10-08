@@ -827,3 +827,93 @@ select:focus {
     }
 }
 ```
+/* ================= DASHBOARD VISIBILITY FIX ================= */
+
+.dashboard-page,
+.dashboard-content {
+    color: var(--text);
+}
+
+.inventory-section {
+    border: 1px solid #141414 !important;
+}
+
+.welcome-section,
+.summary-card {
+    border: 1px solid #141414 !important;
+}
+
+/* Navbar options */
+.nav-links .nav-item {
+    color: #ffffff !important;
+    opacity: 1 !important;
+    background: transparent;
+}
+
+.nav-links .nav-item:hover,
+.nav-links .nav-item.active {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+/* Add Medicine button */
+.primary-button,
+#openAddMedicine,
+#addMedicine {
+    color: #ffffff !important;
+    background: var(--teal) !important;
+    opacity: 1 !important;
+}
+
+.primary-button:hover,
+#openAddMedicine:hover,
+#addMedicine:hover {
+    color: #ffffff !important;
+    background: var(--teal-dark) !important;
+}
+.top-navbar {
+    background: var(--teal) !important;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    border-bottom: 1px solid var(--border);
+}
+
+.brand {
+    color: #ffffff !important;
+    text-decoration: none;
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nav-item {
+    color: #ffffff !important;
+    background: transparent !important;
+    border: none;
+    padding: 10px 15px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.nav-item:hover,
+.nav-item.active {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.15) !important;
+}

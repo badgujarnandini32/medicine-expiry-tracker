@@ -1,4 +1,6 @@
-﻿const getApiOverride = () => {
+﻿const $ = (selector) => document.querySelector(selector);
+
+const getApiOverride = () => {
     const match = window.location.search.match(/[?&]api=([^&]+)/);
 
     if (!match) return "";
@@ -10,1653 +12,1074 @@
     }
 };
 
+const getApiBaseUrl = () => {
+    const override = getApiOverride();
 
-const API_BASE_URL = (() => {
-    const configuredBase = (
-        getApiOverride() ||
-        window.MEDICINE_API_BASE_URL ||
-        ""
-    ).trim().replace(/\/+$/, "");
-
-    if (configuredBase) {
-        return `${configuredBase}/api`;
+    if (override) {
+        return override.endsWith("/api") ? override : `${override}/api`;
     }
 
+    const configuredBase =
+        window.MEDICINE_API_BASE_URL ||
+        window.location.origin;
+
     if (
-        window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1"
+        configuredBase.includes("localhost") ||
+        configuredBase.includes("127.0.0.1")
     ) {
         return "http://localhost:3000/api";
     }
 
-    return "";
-})();
+    return configuredBase.endsWith("/api")
+        ? configuredBase
+        : `${configuredBase}/api`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 
-const $ = (selector) => document.querySelector(selector);
+// =========================
+// API HELPER
+// =========================
 
-const medicineList = $("#medicineList");
+async function apiRequest(endpoint, options = {}) {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        headers: {
+            "Content-Type": "application/json",
+            ...(options.headers || {})
+        },
+        ...options
+    });
 
-let medicines = [];
-let activeFilter = "All";
+    let data = null;
 
-let authToken =
-    localStorage.getItem("medicineTrackerToken") || "";
-
-
-// =========================================================
-// USER FUNCTIONS
-// =========================================================
-
-function normalizeUsername(value) {
-    const trimmed = String(value || "").trim();
-
-    if (!trimmed) return "";
-
-    const lower = trimmed.toLowerCase();
-
-    return lower.endsWith("@gmail.com")
-        ? lower
-        : `${lower}@gmail.com`;
-}
-
-
-function getUsersStore() {
     try {
-        return JSON.parse(
-            localStorage.getItem("medicineTrackerUsers") || "{}"
-        ) || {};
+        data = await response.json();
     } catch (error) {
-        return {};
+        data = null;
     }
-}
-
-
-function saveUsersStore(users) {
-    localStorage.setItem(
-        "medicineTrackerUsers",
-        JSON.stringify(users)
-    );
-}
-
-
-function getMedicinesStore() {
-    try {
-        return JSON.parse(
-            localStorage.getItem("medicineTrackerMedicines") || "{}"
-        ) || {};
-    } catch (error) {
-        return {};
-    }
-}
-
-
-function saveMedicinesStore(store) {
-    localStorage.setItem(
-        "medicineTrackerMedicines",
-        JSON.stringify(store)
-    );
-}
-
-
-function getCurrentUsername() {
-    return localStorage.getItem("medicineTrackerUser") || "";
-}
-
-
-// =========================================================
-// LOCAL API
-// =========================================================
-
-function handleLocalApiRequest(path, options = {}) {
-
-    const method =
-        (options.method || "GET").toUpperCase();
-
-    const body = options.body
-        ? JSON.parse(options.body)
-        : null;
-
-
-    // =========================
-    // SIGN UP
-    // =========================
-
-    if (path === "/signup") {
-
-        const username =
-            normalizeUsername(body?.username);
-
-        const password =
-            String(body?.password || "");
-
-        if (!username || !password) {
-            throw new Error(
-                "Username and password are required."
-            );
-        }
-
-        const users = getUsersStore();
-
-        if (users[username]) {
-            throw new Error(
-                "User already exists."
-            );
-        }
-
-        users[username] = {
-            username,
-            password
-        };
-
-        saveUsersStore(users);
-
-        return {
-            user: { username },
-            message: "Account created successfully."
-        };
-    }
-
-
-    // =========================
-    // LOGIN
-    // =========================
-
-    if (path === "/login") {
-
-        const username =
-            normalizeUsername(body?.username);
-
-        const password =
-            String(body?.password || "");
-
-        if (!username || !password) {
-            throw new Error(
-                "Username and password are required."
-            );
-        }
-
-        const users = getUsersStore();
-
-        const userRecord =
-            users[username];
-
-        if (
-            !userRecord ||
-            userRecord.password !== password
-        ) {
-            throw new Error(
-                "Incorrect username or password."
-            );
-        }
-
-        const token =
-            `local-${Math.random()
-                .toString(36)
-                .slice(2)}-${Date.now()}`;
-
-        localStorage.setItem(
-            "medicineTrackerUser",
-            username
-        );
-
-        localStorage.setItem(
-            "medicineTrackerToken",
-            token
-        );
-
-        return {
-            token,
-            user: { username }
-        };
-    }
-
-
-    // =========================
-    // MEDICINES
-    // =========================
-
-    if (path === "/medicines") {
-
-        const username =
-            getCurrentUsername();
-
-        if (!username) {
-            throw new Error("Missing token");
-        }
-
-
-        // GET MEDICINES
-
-        if (method === "GET") {
-
-            const medicinesStore =
-                getMedicinesStore();
-
-            return (
-                medicinesStore[username] || []
-            ).map((medicine) => ({
-                ...medicine,
-                id: String(
-                    medicine.id ||
-                    `${medicine.name}-${medicine.batch}`
-                )
-            }));
-        }
-
-
-        // ADD MEDICINE
-
-        if (method === "POST") {
-
-            const medicine = {
-                ...body,
-
-                id:
-                    body?.id ||
-                    `med-${Date.now()}-${Math.random()
-                        .toString(16)
-                        .slice(2)}`,
-
-                quantity:
-                    Number(body?.quantity || 0)
-            };
-
-
-            if (
-                !medicine.name ||
-                !medicine.companyName ||
-                !medicine.batch ||
-                !medicine.manufacturingDate ||
-                !medicine.expiryDate ||
-                medicine.quantity <= 0
-            ) {
-                throw new Error(
-                    "All required medicine fields must be filled."
-                );
-            }
-
-
-            const store =
-                getMedicinesStore();
-
-            const currentList =
-                store[username] || [];
-
-
-            const existingIndex =
-                currentList.findIndex(
-                    (item) =>
-                        item.id === medicine.id
-                );
-
-
-            if (existingIndex >= 0) {
-
-                currentList[existingIndex] =
-                    medicine;
-
-            } else {
-
-                currentList.push(medicine);
-
-            }
-
-
-            store[username] =
-                currentList;
-
-            saveMedicinesStore(store);
-
-            return medicine;
-        }
-    }
-
-
-    // =========================
-    // DELETE MEDICINE
-    // =========================
-
-    if (path.startsWith("/medicines/")) {
-
-        const username =
-            getCurrentUsername();
-
-        if (!username) {
-            throw new Error("Missing token");
-        }
-
-        const medicineId =
-            path.split("/medicines/", 2)[1];
-
-        const store =
-            getMedicinesStore();
-
-        const items =
-            store[username] || [];
-
-
-        store[username] =
-            items.filter(
-                (medicine) =>
-                    String(medicine.id) !==
-                    String(medicineId)
-            );
-
-
-        saveMedicinesStore(store);
-
-        return {
-            message:
-                "Medicine deleted successfully."
-        };
-    }
-
-
-    throw new Error("Request failed.");
-}
-
-
-// =========================================================
-// API REQUEST
-// =========================================================
-
-async function apiRequest(path, options = {}) {
-
-    if (!API_BASE_URL) {
-
-        return handleLocalApiRequest(
-            path,
-            options
-        );
-    }
-
-
-    const response =
-        await fetch(
-            `${API_BASE_URL}${path}`,
-            {
-                headers: {
-                    "Content-Type":
-                        "application/json",
-
-                    ...(authToken
-                        ? {
-                            Authorization:
-                                `Bearer ${authToken}`
-                        }
-                        : {}),
-
-                    ...(options.headers || {})
-                },
-
-                ...options
-            }
-        );
-
-
-    const contentType =
-        response.headers.get(
-            "content-type"
-        ) || "";
-
-
-    const data =
-        contentType.includes(
-            "application/json"
-        )
-            ? await response.json()
-            : await response.text();
-
 
     if (!response.ok) {
-
-        const message =
-            typeof data === "string"
-                ? data
-                : (
-                    data.message ||
-                    "Request failed."
-                );
-
-        throw new Error(message);
+        throw new Error(
+            data?.message ||
+            data?.error ||
+            `Request failed with status ${response.status}`
+        );
     }
-
 
     return data;
 }
 
 
-// =========================================================
-// EXPIRY CALCULATION
-// =========================================================
+// =========================
+// LOCAL STORAGE HELPERS
+// =========================
 
-function calculateBestBeforeExpiry() {
-
-    const manufacturingDate =
-        $("#manufacturingDate").value;
-
-    const months =
-        Number(
-            $("#bestBeforeMonths").value
+function getLocalMedicines() {
+    try {
+        return JSON.parse(
+            localStorage.getItem("medicineTrackerMedicines") || "[]"
         );
-
-
-    if (
-        !manufacturingDate ||
-        !Number.isInteger(months) ||
-        months < 1
-    ) {
-        return "";
+    } catch (error) {
+        return [];
     }
+}
 
-
-    const [year, month, day] =
-        manufacturingDate
-            .split("-")
-            .map(Number);
-
-
-    const expiry =
-        new Date(
-            Date.UTC(
-                year,
-                month - 1 + months,
-                day
-            )
-        );
-
-
-    // Handle months with fewer days
-    if (
-        expiry.getUTCDate() !== day
-    ) {
-        expiry.setUTCDate(0);
-    }
-
-
-    return [
-        expiry.getUTCFullYear(),
-
-        String(
-            expiry.getUTCMonth() + 1
-        ).padStart(2, "0"),
-
-        String(
-            expiry.getUTCDate()
-        ).padStart(2, "0")
-
-    ].join("-");
+function saveLocalMedicines(medicines) {
+    localStorage.setItem(
+        "medicineTrackerMedicines",
+        JSON.stringify(medicines)
+    );
 }
 
 
-// =========================================================
-// EXPIRY TYPE
-// =========================================================
+// =========================
+// EXPIRY CALCULATION
+// =========================
+
+function calculateBestBeforeExpiry(manufacturingDate, months) {
+    if (!manufacturingDate || !months) return "";
+
+    const date = new Date(manufacturingDate);
+
+    if (Number.isNaN(date.getTime())) return "";
+
+    date.setMonth(date.getMonth() + Number(months));
+
+    return date.toISOString().split("T")[0];
+}
+
+
+// =========================
+// EXPIRY FIELDS
+// =========================
 
 function updateExpiryFields() {
+    const selectedType = $(
+        'input[name="expiryType"]:checked'
+    )?.value;
 
-    const expiryType =
-        document.querySelector(
-            'input[name="expiryType"]:checked'
-        )?.value || "exact";
+    const exactExpiryField = $("#exactExpiryField");
+    const bestBeforeField = $("#bestBeforeField");
 
+    if (!exactExpiryField || !bestBeforeField) return;
 
-    const exactField =
-        $("#exactExpiryField");
-
-    const bestBeforeField =
-        $("#bestBeforeField");
-
-    const expiryDate =
-        $("#expiryDate");
-
-    const bestBeforeMonths =
-        $("#bestBeforeMonths");
-
-
-    if (expiryType === "bestBefore") {
-
-        exactField.classList.add("hidden");
-
+    if (selectedType === "bestBefore") {
+        exactExpiryField.classList.add("hidden");
         bestBeforeField.classList.remove("hidden");
-
-
-        expiryDate.required = false;
-
-        bestBeforeMonths.required = true;
-
-
-        // Calculate immediately if values already exist
-        if (
-            $("#manufacturingDate").value &&
-            bestBeforeMonths.value
-        ) {
-            expiryDate.value =
-                calculateBestBeforeExpiry();
-        }
-
     } else {
-
-        exactField.classList.remove("hidden");
-
+        exactExpiryField.classList.remove("hidden");
         bestBeforeField.classList.add("hidden");
-
-
-        expiryDate.required = true;
-
-        bestBeforeMonths.required = false;
     }
 }
 
 
-// =========================================================
-// MEDICINE STATUS
-// =========================================================
+// =========================
+// DATE / STATUS HELPERS
+// =========================
 
-function getDaysLeft(medicine) {
+function getDaysLeft(expiryDate) {
+    if (!expiryDate) return null;
 
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    const expiry =
-        new Date(
-            `${medicine.expiryDate}T00:00:00`
-        );
+    const expiry = new Date(expiryDate);
+    expiry.setHours(0, 0, 0, 0);
 
-
-    today.setHours(
-        0,
-        0,
-        0,
-        0
-    );
-
+    const difference =
+        expiry.getTime() - today.getTime();
 
     return Math.ceil(
-        (expiry - today) /
-        86400000
+        difference / (1000 * 60 * 60 * 24)
     );
 }
 
 
-function getStatus(daysLeft) {
+function getStatus(expiryDate) {
+    const daysLeft = getDaysLeft(expiryDate);
 
-    if (daysLeft < 0)
-        return "Expired";
+    if (daysLeft === null) {
+        return {
+            text: "Unknown",
+            className: "status-warning"
+        };
+    }
 
-    if (daysLeft <= 30)
-        return "Expiring Soon";
+    if (daysLeft < 0) {
+        return {
+            text: "Expired",
+            className: "status-expired"
+        };
+    }
 
-    return "Safe";
+    if (daysLeft <= 30) {
+        return {
+            text: "Expiring Soon",
+            className: "status-warning"
+        };
+    }
+
+    return {
+        text: "Safe",
+        className: "status-safe"
+    };
 }
 
 
-// =========================================================
-// SECURITY
-// =========================================================
+// =========================
+// HTML ESCAPE
+// =========================
 
 function escapeHtml(value) {
-
-    return String(value).replace(
-        /[&<>'"]/g,
-        (character) => ({
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            "'": "&#039;",
-            '"': "&quot;"
-        }[character])
-    );
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 
-// =========================================================
+// =========================
 // DISPLAY MEDICINES
-// =========================================================
+// =========================
 
-function displayMedicines() {
+function displayMedicines(medicines) {
+    const container = $("#medicineList");
 
-    const searchTerm =
-        $("#searchInput")
-            .value
-            .trim()
-            .toLowerCase();
+    if (!container) return;
 
-
-    const filtered =
-        medicines
-            .map(
-                (medicine, index) => ({
-                    medicine,
-                    index,
-                    daysLeft:
-                        getDaysLeft(medicine)
-                })
-            )
-            .filter(
-                ({
-                    medicine,
-                    daysLeft
-                }) => {
-
-                    const status =
-                        getStatus(daysLeft);
-
-
-                    const matchesFilter =
-                        activeFilter === "All" ||
-                        status === activeFilter;
-
-
-                    const matchesSearch =
-                        (medicine.name || "")
-                            .toLowerCase()
-                            .includes(searchTerm)
-                        ||
-                        (medicine.batch || "")
-                            .toLowerCase()
-                            .includes(searchTerm);
-
-
-                    return (
-                        matchesFilter &&
-                        matchesSearch
-                    );
-                }
-            );
-
-
-    // Summary counts
-
-    $("#totalCount").textContent =
-        medicines.length;
-
-
-    $("#safeCount").textContent =
-        medicines.filter(
-            (medicine) =>
-                getStatus(
-                    getDaysLeft(medicine)
-                ) === "Safe"
-        ).length;
-
-
-    $("#soonCount").textContent =
-        medicines.filter(
-            (medicine) =>
-                getStatus(
-                    getDaysLeft(medicine)
-                ) === "Expiring Soon"
-        ).length;
-
-
-    $("#expiredCount").textContent =
-        medicines.filter(
-            (medicine) =>
-                getStatus(
-                    getDaysLeft(medicine)
-                ) === "Expired"
-        ).length;
-
-
-    // Empty state
-
-    if (!filtered.length) {
-
-        medicineList.innerHTML = `
+    if (!medicines || medicines.length === 0) {
+        container.innerHTML = `
             <div class="empty-state">
-                <span>~</span>
-
                 <h3>No medicines found</h3>
-
-                <p>
-                    Add a medicine or adjust
-                    your search and filters.
-                </p>
+                <p>Add a medicine to start tracking expiry dates.</p>
             </div>
         `;
 
+        updateSummaryCards([]);
         return;
     }
 
+    container.innerHTML = medicines
+        .map((medicine) => {
+            const status = getStatus(medicine.expiryDate);
+            const daysLeft = getDaysLeft(medicine.expiryDate);
 
-    // Medicine table
+            let daysText = "";
 
-    medicineList.innerHTML = `
-        <div class="medicine-table">
+            if (daysLeft < 0) {
+                daysText = `${Math.abs(daysLeft)} days ago`;
+            } else if (daysLeft === 0) {
+                daysText = "Expires today";
+            } else {
+                daysText = `${daysLeft} days left`;
+            }
 
-            <div class="table-row table-header">
-                <span>Medicine</span>
-                <span>Batch number</span>
-                <span>Dates</span>
-                <span>Quantity</span>
-                <span>Status</span>
-                <span></span>
-            </div>
+            return `
+                <div class="medicine-card">
+                    <div class="medicine-info">
+                        <h3>${escapeHtml(medicine.name)}</h3>
 
-            ${filtered.map(
-                ({
-                    medicine,
-                    index,
-                    daysLeft
-                }) => {
+                        <p>
+                            <strong>Batch:</strong>
+                            ${escapeHtml(medicine.batchNumber || "-")}
+                        </p>
 
-                    const status =
-                        getStatus(daysLeft);
+                        <p>
+                            <strong>Company:</strong>
+                            ${escapeHtml(medicine.companyName || "-")}
+                        </p>
 
+                        <p>
+                            <strong>Manufacturing Date:</strong>
+                            ${escapeHtml(medicine.manufacturingDate || "-")}
+                        </p>
 
-                    const daysLabel =
-                        daysLeft < 0
-                            ? `${Math.abs(daysLeft)} days overdue`
-                            : `${daysLeft} days left`;
+                        <p>
+                            <strong>Expiry Date:</strong>
+                            ${escapeHtml(medicine.expiryDate || "-")}
+                        </p>
 
+                        <p>
+                            <strong>Quantity:</strong>
+                            ${escapeHtml(medicine.quantity || "-")}
+                        </p>
+                    </div>
 
-                    const statusClass =
-                        status
-                            .toLowerCase()
-                            .replace(
-                                " ",
-                                "-"
-                            );
+                    <div class="medicine-status">
+                        <span class="status-badge ${status.className}">
+                            ${status.text}
+                        </span>
 
+                        <p>${daysText}</p>
 
-                    return `
-                        <div class="table-row">
+                        <button
+                            class="delete-medicine"
+                            data-id="${escapeHtml(medicine.id)}"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            `;
+        })
+        .join("");
 
-                            <div class="medicine-name">
-
-                                <span class="medicine-icon">
-                                    +
-                                </span>
-
-                                <div>
-
-                                    <strong>
-                                        ${escapeHtml(
-                                            medicine.name
-                                        )}
-                                    </strong>
-
-                                    <small>
-                                        ${escapeHtml(
-                                            medicine.companyName || ""
-                                        )}
-                                    </small>
-
-                                </div>
-
-                            </div>
-
-
-                            <span class="muted">
-                                ${escapeHtml(
-                                    medicine.batch || ""
-                                )}
-                            </span>
-
-
-                            <span class="date-stack">
-
-                                <b>
-                                    ${escapeHtml(
-                                        medicine.expiryDate
-                                    )}
-                                </b>
-
-                                <small>
-                                    Made
-                                    ${escapeHtml(
-                                        medicine.manufacturingDate
-                                    )}
-                                </small>
-
-                            </span>
-
-
-                            <span>
-                                ${escapeHtml(
-                                    medicine.quantity
-                                )}
-                                units
-                            </span>
-
-
-                            <span>
-
-                                <b class="status ${statusClass}">
-                                    ${status}
-                                </b>
-
-                                <small class="days-left">
-                                    ${daysLabel}
-                                </small>
-
-                            </span>
-
-
-                            <button
-                                class="delete-button"
-                                data-id="${medicine.id || index}"
-                                aria-label="Delete ${escapeHtml(
-                                    medicine.name
-                                )}"
-                            >
-                                Delete
-                            </button>
-
-                        </div>
-                    `;
-                }
-            ).join("")}
-
-        </div>
-    `;
+    updateSummaryCards(medicines);
 }
 
 
-// =========================================================
+// =========================
+// SUMMARY CARDS
+// =========================
+
+function updateSummaryCards(medicines) {
+    const totalMedicines = medicines.length;
+
+    const expired = medicines.filter(
+        (medicine) =>
+            getDaysLeft(medicine.expiryDate) < 0
+    ).length;
+
+    const expiringSoon = medicines.filter(
+        (medicine) => {
+            const days = getDaysLeft(medicine.expiryDate);
+            return days >= 0 && days <= 30;
+        }
+    ).length;
+
+    const safe = medicines.filter(
+        (medicine) =>
+            getDaysLeft(medicine.expiryDate) > 30
+    ).length;
+
+    const totalElement =
+        $("#totalMedicines") ||
+        $("#totalCount");
+
+    const expiredElement =
+        $("#expiredMedicines") ||
+        $("#expiredCount");
+
+    const expiringElement =
+        $("#expiringSoon") ||
+        $("#expiringCount");
+
+    const safeElement =
+        $("#safeMedicines") ||
+        $("#safeCount");
+
+    if (totalElement) {
+        totalElement.textContent = totalMedicines;
+    }
+
+    if (expiredElement) {
+        expiredElement.textContent = expired;
+    }
+
+    if (expiringElement) {
+        expiringElement.textContent = expiringSoon;
+    }
+
+    if (safeElement) {
+        safeElement.textContent = safe;
+    }
+}
+
+
+// =========================
 // LOAD MEDICINES
-// =========================================================
+// =========================
 
 async function loadMedicines() {
-
-    if (!authToken) {
-
-        medicines = [];
-
-        displayMedicines();
-
-        return;
-    }
-
-
     try {
+        const data = await apiRequest("/medicines");
 
-        medicines =
-            await apiRequest(
-                "/medicines"
-            );
+        const medicines =
+            Array.isArray(data)
+                ? data
+                : data?.medicines || [];
 
-        displayMedicines();
+        localStorage.setItem(
+            "medicineTrackerMedicines",
+            JSON.stringify(medicines)
+        );
 
+        displayMedicines(medicines);
     } catch (error) {
+        console.warn(
+            "Backend unavailable. Using local storage.",
+            error
+        );
 
-        console.error(error);
-
-        logout();
+        displayMedicines(getLocalMedicines());
     }
 }
 
 
-// =========================================================
+// =========================
 // SAVE MEDICINE
-// =========================================================
+// =========================
 
-async function saveMedicine(event) {
+async function saveMedicine(medicine) {
+    const localMedicines = getLocalMedicines();
 
-    event.preventDefault();
-
-
-    const expiryType =
-        document.querySelector(
-            'input[name="expiryType"]:checked'
-        )?.value || "exact";
-
-
-    const manufacturingDate =
-        $("#manufacturingDate").value;
-
-
-    const exactExpiryDate =
-        $("#expiryDate").value;
-
-
-    const bestBeforeMonths =
-        Number(
-            $("#bestBeforeMonths").value
-        );
-
-
-    let expiryDate;
-
-
-    if (expiryType === "bestBefore") {
-
-        expiryDate =
-            calculateBestBeforeExpiry();
-
-    } else {
-
-        expiryDate =
-            exactExpiryDate;
-    }
-
-
-    // Validation
-
-    if (!manufacturingDate) {
-
-        alert(
-            "Manufacturing date is required."
-        );
-
-        return;
-    }
-
-
-    if (
-        expiryType === "bestBefore" &&
-        (
-            !Number.isInteger(bestBeforeMonths) ||
-            bestBeforeMonths < 1
-        )
-    ) {
-
-        alert(
-            "Enter the best-before period in months."
-        );
-
-        return;
-    }
-
-
-    if (!expiryDate) {
-
-        alert(
-            expiryType === "bestBefore"
-                ? "Enter the best-before period in months."
-                : "Enter the expiry date."
-        );
-
-        return;
-    }
-
+    const newMedicine = {
+        ...medicine,
+        id:
+            medicine.id ||
+            Date.now().toString()
+    };
 
     try {
+        const data = await apiRequest("/medicines", {
+            method: "POST",
+            body: JSON.stringify(newMedicine)
+        });
 
-        const payload = {
+        const savedMedicine =
+            data?.medicine || data || newMedicine;
 
-            name:
-                $("#medicineName")
-                    .value
-                    .trim(),
+        localMedicines.push(savedMedicine);
+        saveLocalMedicines(localMedicines);
 
-            companyName:
-                $("#companyName")
-                    .value
-                    .trim(),
-
-            batch:
-                $("#batchNumber")
-                    .value
-                    .trim(),
-
-            manufacturingDate,
-
-            expiryType,
-
-            bestBeforeMonths:
-                expiryType === "bestBefore"
-                    ? bestBeforeMonths
-                    : null,
-
-            expiryDate,
-
-            quantity:
-                Number(
-                    $("#quantity").value
-                )
-        };
-
-
-        await apiRequest(
-            "/medicines",
-            {
-                method: "POST",
-
-                body:
-                    JSON.stringify(payload)
-            }
+        return savedMedicine;
+    } catch (error) {
+        console.warn(
+            "Backend unavailable. Saving locally.",
+            error
         );
 
+        localMedicines.push(newMedicine);
+        saveLocalMedicines(localMedicines);
 
-        // Reset form
-
-        event.target.reset();
-
-
-        // Restore exact expiry mode
-
-        const exactRadio =
-            document.querySelector(
-                'input[name="expiryType"][value="exact"]'
-            );
-
-
-        if (exactRadio) {
-            exactRadio.checked = true;
-        }
-
-
-        updateExpiryFields();
-
-
-        // Close dialog
-
-        $("#medicineDialog").close();
-
-
-        // Reload medicines
-
-        await loadMedicines();
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert(error.message);
+        return newMedicine;
     }
 }
 
 
-// =========================================================
+// =========================
 // DELETE MEDICINE
-// =========================================================
+// =========================
 
-async function deleteMedicine(medicineId) {
-
+async function deleteMedicine(id) {
     try {
-
-        await apiRequest(
-            `/medicines/${medicineId}`,
-            {
-                method: "DELETE"
-            }
-        );
-
-
-        await loadMedicines();
-
+        await apiRequest(`/medicines/${id}`, {
+            method: "DELETE"
+        });
     } catch (error) {
-
-        console.error(error);
-
-        alert(error.message);
+        console.warn(
+            "Could not delete from backend. Removing locally.",
+            error
+        );
     }
+
+    const medicines = getLocalMedicines().filter(
+        (medicine) =>
+            String(medicine.id) !== String(id)
+    );
+
+    saveLocalMedicines(medicines);
+
+    await loadMedicines();
 }
 
 
-// =========================================================
-// DASHBOARD
-// =========================================================
+// =========================
+// LOGIN / DASHBOARD
+// =========================
 
 function showDashboard() {
-
-    $("#loginPage")
-        .classList
-        .add("hidden");
-
-
-    $("#dashboardPage")
-        .classList
-        .remove("hidden");
-
+    $("#loginPage").classList.add("hidden");
+    $("#dashboardPage").classList.remove("hidden");
 
     const savedUser =
-        localStorage.getItem(
-            "medicineTrackerUser"
-        ) || "there";
+        localStorage.getItem("medicineTrackerUser") ||
+        "there";
 
+    $("#profileName").textContent = savedUser;
 
-    $("#profileName")
-        .textContent =
-        savedUser;
-
-
-    $("#profileInitial")
-        .textContent =
-        savedUser
-            .charAt(0)
-            .toUpperCase();
-
+    if ($("#profileInitial")) {
+        $("#profileInitial").textContent =
+            savedUser.charAt(0).toUpperCase();
+    }
 
     loadMedicines();
 }
 
 
 function showLogin() {
+    $("#dashboardPage").classList.add("hidden");
+    $("#loginPage").classList.remove("hidden");
 
-    $("#createAccountCard")
-        .classList
-        .add("hidden");
+    const loginForm = $("#loginForm");
 
-
-    $("#loginCard")
-        .classList
-        .remove("hidden");
-
-
-    $("#loginMessage")
-        .textContent = "";
+    if (loginForm) {
+        loginForm.reset();
+    }
 }
 
 
 function showCreateAccount() {
+    const loginPage = $("#loginPage");
 
-    $("#loginCard")
-        .classList
-        .add("hidden");
+    if (!loginPage) return;
 
+    loginPage.innerHTML = `
+        <div class="login-container">
+            <h1>Create Account</h1>
 
-    $("#createAccountCard")
-        .classList
-        .remove("hidden");
+            <form id="signupForm">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input
+                        type="text"
+                        id="signupName"
+                        required
+                    >
+                </div>
 
+                <div class="form-group">
+                    <label>Email</label>
+                    <input
+                        type="email"
+                        id="signupEmail"
+                        required
+                    >
+                </div>
 
-    $("#createAccountMessage")
-        .textContent = "";
+                <div class="form-group">
+                    <label>Password</label>
+                    <input
+                        type="password"
+                        id="signupPassword"
+                        required
+                    >
+                </div>
+
+                <button type="submit">
+                    Create Account
+                </button>
+            </form>
+
+            <button
+                type="button"
+                id="backToLogin"
+            >
+                Back to Login
+            </button>
+        </div>
+    `;
+
+    $("#signupForm").addEventListener(
+        "submit",
+        handleSignup
+    );
+
+    $("#backToLogin").addEventListener(
+        "click",
+        () => location.reload()
+    );
 }
 
 
+// =========================
+// SIGNUP
+// =========================
+
+async function handleSignup(event) {
+    event.preventDefault();
+
+    const name =
+        $("#signupName")?.value.trim();
+
+    const email =
+        $("#signupEmail")?.value.trim();
+
+    const password =
+        $("#signupPassword")?.value;
+
+    if (!name || !email || !password) {
+        alert("Please fill all fields.");
+        return;
+    }
+
+    try {
+        await apiRequest("/auth/signup", {
+            method: "POST",
+            body: JSON.stringify({
+                name,
+                email,
+                password
+            })
+        });
+
+        alert("Account created successfully.");
+
+        location.reload();
+    } catch (error) {
+        localStorage.setItem(
+            "medicineTrackerUser",
+            name
+        );
+
+        localStorage.setItem(
+            "medicineTrackerEmail",
+            email
+        );
+
+        localStorage.setItem(
+            "medicineTrackerPassword",
+            password
+        );
+
+        alert("Account created successfully.");
+
+        location.reload();
+    }
+}
+
+
+// =========================
+// LOGIN
+// =========================
+
+async function handleLogin(event) {
+    event.preventDefault();
+
+    const email =
+        $("#loginEmail")?.value.trim();
+
+    const password =
+        $("#loginPassword")?.value;
+
+    if (!email || !password) {
+        alert("Please enter email and password.");
+        return;
+    }
+
+    try {
+        const data = await apiRequest(
+            "/auth/login",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    email,
+                    password
+                })
+            }
+        );
+
+        const user =
+            data?.user || data;
+
+        localStorage.setItem(
+            "medicineTrackerUser",
+            user?.name || email
+        );
+
+        localStorage.setItem(
+            "medicineTrackerEmail",
+            email
+        );
+
+        showDashboard();
+    } catch (error) {
+        const savedEmail =
+            localStorage.getItem(
+                "medicineTrackerEmail"
+            );
+
+        const savedPassword =
+            localStorage.getItem(
+                "medicineTrackerPassword"
+            );
+
+        if (
+            email === savedEmail &&
+            password === savedPassword
+        ) {
+            showDashboard();
+        } else {
+            alert(
+                "Invalid email or password."
+            );
+        }
+    }
+}
+
+
+// =========================
+// LOGOUT
+// =========================
+
 function logout() {
-
-    authToken = "";
-
-    localStorage.removeItem(
-        "medicineTrackerToken"
-    );
-
     localStorage.removeItem(
         "medicineTrackerUser"
     );
 
     localStorage.removeItem(
-        "medicineTrackerRemembered"
+        "medicineTrackerEmail"
     );
 
-    sessionStorage.removeItem(
-        "medicineTrackerSession"
+    localStorage.removeItem(
+        "medicineTrackerPassword"
     );
-
-
-    $("#dashboardPage")
-        .classList
-        .add("hidden");
-
-
-    $("#loginPage")
-        .classList
-        .remove("hidden");
-
 
     showLogin();
 }
 
 
-// =========================================================
-// CREATE ACCOUNT
-// =========================================================
+// =========================
+// ADD MEDICINE DIALOG
+// =========================
 
-$("#createAccountForm")
-    .addEventListener(
-        "submit",
-        async (event) => {
+function openMedicineDialog() {
+    const dialog =
+        $("#medicineDialog");
 
-            event.preventDefault();
+    if (!dialog) return;
+
+    dialog.classList.remove("hidden");
+
+    const form =
+        $("#medicineForm");
+
+    if (form) {
+        form.reset();
+    }
+
+    updateExpiryFields();
+}
 
 
-            const username =
-                $("#createAccountEmail")
-                    .value
-                    .trim();
+function closeMedicineDialog() {
+    const dialog =
+        $("#medicineDialog");
+
+    if (!dialog) return;
+
+    dialog.classList.add("hidden");
+}
 
 
-            const password =
-                $("#createAccountPassword")
-                    .value;
+// =========================
+// MEDICINE FORM
+// =========================
+
+async function handleMedicineSubmit(event) {
+    event.preventDefault();
+
+    const name =
+        $("#medicineName")?.value.trim();
+
+    const batchNumber =
+        $("#batchNumber")?.value.trim();
+
+    const companyName =
+        $("#companyName")?.value.trim();
+
+    const manufacturingDate =
+        $("#manufacturingDate")?.value;
+
+    const quantity =
+        $("#quantity")?.value;
+
+    const expiryType =
+        document.querySelector(
+            'input[name="expiryType"]:checked'
+        )?.value;
+
+    if (
+        !name ||
+        !batchNumber ||
+        !companyName ||
+        !manufacturingDate ||
+        !quantity
+    ) {
+        alert("Please fill all required fields.");
+        return;
+    }
+
+    let expiryDate = "";
+
+    if (expiryType === "bestBefore") {
+        const months =
+            $("#bestBeforeMonths")?.value;
+
+        if (!months) {
+            alert(
+                "Please enter the shelf life in months."
+            );
+            return;
+        }
+
+        expiryDate =
+            calculateBestBeforeExpiry(
+                manufacturingDate,
+                months
+            );
+    } else {
+        expiryDate =
+            $("#expiryDate")?.value;
+
+        if (!expiryDate) {
+            alert(
+                "Please select an expiry date."
+            );
+            return;
+        }
+    }
+
+    const medicine = {
+        name,
+        batchNumber,
+        companyName,
+        manufacturingDate,
+        expiryDate,
+        quantity,
+        expiryType
+    };
+
+    await saveMedicine(medicine);
+
+    closeMedicineDialog();
+
+    await loadMedicines();
+
+    alert("Medicine added successfully.");
+}
 
 
-            const confirmPassword =
-                $("#confirmAccountPassword")
-                    .value;
+// =========================
+// SEARCH + FILTER
+// =========================
 
+function filterMedicines() {
+    const searchInput =
+        $("#searchInput");
+
+    const filterSelect =
+        $("#statusFilter");
+
+    const searchText =
+        searchInput?.value
+            .toLowerCase()
+            .trim() || "";
+
+    const selectedFilter =
+        filterSelect?.value || "all";
+
+    const medicines =
+        getLocalMedicines();
+
+    const filtered =
+        medicines.filter((medicine) => {
+            const searchableText = `
+                ${medicine.name}
+                ${medicine.batchNumber}
+                ${medicine.companyName}
+            `.toLowerCase();
+
+            const matchesSearch =
+                searchableText.includes(searchText);
+
+            const days =
+                getDaysLeft(
+                    medicine.expiryDate
+                );
+
+            let matchesFilter = true;
+
+            if (selectedFilter === "expired") {
+                matchesFilter = days < 0;
+            }
 
             if (
-                password !==
-                confirmPassword
+                selectedFilter ===
+                "expiring"
             ) {
-
-                $("#createAccountMessage")
-                    .textContent =
-                    "Passwords do not match.";
-
-                return;
+                matchesFilter =
+                    days >= 0 &&
+                    days <= 30;
             }
 
-
-            try {
-
-                await apiRequest(
-                    "/signup",
-                    {
-                        method: "POST",
-
-                        body:
-                            JSON.stringify({
-                                username,
-                                password
-                            })
-                    }
-                );
-
-
-                event.target.reset();
-
-                showLogin();
-
-
-                $("#loginEmail")
-                    .value =
-                    username;
-
-
-                $("#loginMessage")
-                    .textContent =
-                    "Account created. Log in to continue.";
-
-            } catch (error) {
-
-                $("#createAccountMessage")
-                    .textContent =
-                    error.message;
+            if (selectedFilter === "safe") {
+                matchesFilter = days > 30;
             }
+
+            return (
+                matchesSearch &&
+                matchesFilter
+            );
+        });
+
+    displayMedicines(filtered);
+}
+
+
+// =========================
+// EVENT LISTENERS
+// =========================
+
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        // Login
+        const loginForm =
+            $("#loginForm");
+
+        if (loginForm) {
+            loginForm.addEventListener(
+                "submit",
+                handleLogin
+            );
         }
-    );
 
 
-// =========================================================
-// LOGIN
-// =========================================================
+        // Create account
+        const createAccountButton =
+            $("#createAccountButton");
 
-$("#loginForm")
-    .addEventListener(
-        "submit",
-        async (event) => {
-
-            event.preventDefault();
-
-
-            const user =
-                $("#loginEmail")
-                    .value
-                    .trim();
+        if (createAccountButton) {
+            createAccountButton.addEventListener(
+                "click",
+                showCreateAccount
+            );
+        }
 
 
-            const password =
-                $("#loginPassword")
-                    .value;
+        // Logout
+        const logoutButton =
+            $("#logoutButton");
+
+        if (logoutButton) {
+            logoutButton.addEventListener(
+                "click",
+                logout
+            );
+        }
 
 
-            try {
-
-                const response =
-                    await apiRequest(
-                        "/login",
-                        {
-                            method: "POST",
-
-                            body:
-                                JSON.stringify({
-                                    username: user,
-                                    password
-                                })
-                        }
+        // Add medicine buttons
+        document.addEventListener(
+            "click",
+            (event) => {
+                const addButton =
+                    event.target.closest(
+                        '[data-action="add"]'
                     );
 
+                if (addButton) {
+                    openMedicineDialog();
+                }
+            }
+        );
 
-                authToken =
-                    response.token;
+
+        // Medicine form
+        const medicineForm =
+            $("#medicineForm");
+
+        if (medicineForm) {
+            medicineForm.addEventListener(
+                "submit",
+                handleMedicineSubmit
+            );
+        }
 
 
-                localStorage.setItem(
-                    "medicineTrackerToken",
-                    authToken
+        // Expiry type
+        document
+            .querySelectorAll(
+                'input[name="expiryType"]'
+            )
+            .forEach((radio) => {
+                radio.addEventListener(
+                    "change",
+                    updateExpiryFields
                 );
+            });
 
 
-                localStorage.setItem(
-                    "medicineTrackerUser",
-                    user
-                );
+        // Close dialog
+        const closeDialogButton =
+            $("#closeMedicineDialog");
+
+        if (closeDialogButton) {
+            closeDialogButton.addEventListener(
+                "click",
+                closeMedicineDialog
+            );
+        }
 
 
-                sessionStorage.setItem(
-                    "medicineTrackerSession",
-                    "true"
-                );
+        const cancelMedicineButton =
+            $("#cancelMedicine");
 
+        if (cancelMedicineButton) {
+            cancelMedicineButton.addEventListener(
+                "click",
+                closeMedicineDialog
+            );
+        }
+
+
+        // Delete medicine
+        document.addEventListener(
+            "click",
+            (event) => {
+                const deleteButton =
+                    event.target.closest(
+                        ".delete-medicine"
+                    );
+
+                if (!deleteButton) return;
+
+                const id =
+                    deleteButton.dataset.id;
 
                 if (
-                    $("#rememberMe").checked
+                    confirm(
+                        "Are you sure you want to delete this medicine?"
+                    )
                 ) {
-
-                    localStorage.setItem(
-                        "medicineTrackerRemembered",
-                        "true"
-                    );
-
-                } else {
-
-                    localStorage.removeItem(
-                        "medicineTrackerRemembered"
-                    );
+                    deleteMedicine(id);
                 }
-
-
-                showDashboard();
-
-            } catch (error) {
-
-                $("#loginMessage")
-                    .textContent =
-                    error.message;
             }
+        );
+
+
+        // Search
+        const searchInput =
+            $("#searchInput");
+
+        if (searchInput) {
+            searchInput.addEventListener(
+                "input",
+                filterMedicines
+            );
         }
-    );
 
 
-// =========================================================
-// UI EVENTS
-// =========================================================
+        // Filter
+        const statusFilter =
+            $("#statusFilter");
 
-$("#showCreateAccountButton")
-    .addEventListener(
-        "click",
-        showCreateAccount
-    );
-
-
-$("#togglePassword")
-    .addEventListener(
-        "click",
-        () => {
-
-            const password =
-                $("#loginPassword");
-
-
-            const isPassword =
-                password.type === "password";
-
-
-            password.type =
-                isPassword
-                    ? "text"
-                    : "password";
-
-
-            $("#togglePassword")
-                .textContent =
-                isPassword
-                    ? "Hide"
-                    : "Show";
-        }
-    );
-
-
-// Remembered email
-
-$("#loginEmail").value =
-    localStorage.getItem(
-        "medicineTrackerRemembered"
-    )
-        ? localStorage.getItem(
-            "medicineTrackerUser"
-        ) || ""
-        : "";
-
-
-// =========================================================
-// ADD MEDICINE DIALOG
-// =========================================================
-
-$("#openAddMedicine")
-    .addEventListener(
-        "click",
-        () => {
-
-            updateExpiryFields();
-
-            $("#medicineDialog")
-                .showModal();
-        }
-    );
-
-
-$("#closeDialog")
-    .addEventListener(
-        "click",
-        () => {
-
-            $("#medicineDialog")
-                .close();
-        }
-    );
-
-
-$("#medicineDialog")
-    .addEventListener(
-        "click",
-        (event) => {
-
-            if (
-                event.target ===
-                $("#medicineDialog")
-            ) {
-
-                $("#medicineDialog")
-                    .close();
-            }
-        }
-    );
-
-
-// =========================================================
-// EXPIRY TYPE
-// =========================================================
-
-document
-    .querySelectorAll(
-        'input[name="expiryType"]'
-    )
-    .forEach(
-        (radio) => {
-
-            radio.addEventListener(
+        if (statusFilter) {
+            statusFilter.addEventListener(
                 "change",
-                updateExpiryFields
+                filterMedicines
             );
         }
-    );
 
 
-// Manufacturing date changes
+        // Navbar navigation
+        document
+            .querySelectorAll(".nav-item")
+            .forEach((button) => {
+                button.addEventListener(
+                    "click",
+                    () => {
+                        document
+                            .querySelectorAll(
+                                ".nav-item"
+                            )
+                            .forEach((item) =>
+                                item.classList.remove(
+                                    "active"
+                                )
+                            );
 
-$("#manufacturingDate")
-    .addEventListener(
-        "input",
-        () => {
-
-            const expiryType =
-                document.querySelector(
-                    'input[name="expiryType"]:checked'
-                )?.value;
-
-
-            if (
-                expiryType === "bestBefore"
-            ) {
-
-                const calculated =
-                    calculateBestBeforeExpiry();
-
-                if (calculated) {
-                    $("#expiryDate").value =
-                        calculated;
-                }
-            }
-        }
-    );
-
-
-// Best-before months changes
-
-$("#bestBeforeMonths")
-    .addEventListener(
-        "input",
-        () => {
-
-            const expiryType =
-                document.querySelector(
-                    'input[name="expiryType"]:checked'
-                )?.value;
-
-
-            if (
-                expiryType === "bestBefore"
-            ) {
-
-                const calculated =
-                    calculateBestBeforeExpiry();
-
-                if (calculated) {
-                    $("#expiryDate").value =
-                        calculated;
-                }
-            }
-        }
-    );
-
-
-// Submit form
-
-$("#medicineForm")
-    .addEventListener(
-        "submit",
-        saveMedicine
-    );
-
-
-// =========================================================
-// DELETE
-// =========================================================
-
-$("#medicineList")
-    .addEventListener(
-        "click",
-        (event) => {
-
-            const button =
-                event.target.closest(
-                    ".delete-button"
+                        if (
+                            !button.hasAttribute(
+                                "data-action"
+                            ) &&
+                            button.id !==
+                                "logoutButton"
+                        ) {
+                            button.classList.add(
+                                "active"
+                            );
+                        }
+                    }
                 );
+            });
 
 
-            if (!button) return;
-
-
-            deleteMedicine(
-                button.dataset.id
+        // Keep logged-in user on dashboard
+        const savedUser =
+            localStorage.getItem(
+                "medicineTrackerUser"
             );
+
+        if (savedUser) {
+            showDashboard();
+        } else {
+            showLogin();
         }
-    );
-
-
-// =========================================================
-// SEARCH
-// =========================================================
-
-$("#searchInput")
-    .addEventListener(
-        "input",
-        displayMedicines
-    );
-
-
-// =========================================================
-// FILTER
-// =========================================================
-
-$("#statusFilter")
-    .addEventListener(
-        "change",
-        (event) => {
-
-            activeFilter =
-                event.target.value;
-
-            displayMedicines();
-        }
-    );
-
-
-// =========================================================
-// LOGOUT
-// =========================================================
-
-$("#logoutButton")
-    .addEventListener(
-        "click",
-        logout
-    );
-
-
-// =========================================================
-// NAVBAR ADD MEDICINE
-// =========================================================
-
-document
-    .querySelectorAll(
-        ".nav-item[data-action='add']"
-    )
-    .forEach(
-        (button) => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    updateExpiryFields();
-
-                    $("#medicineDialog")
-                        .showModal();
-                }
-            );
-        }
-    );
-
-
-// =========================================================
-// INITIALIZE
-// =========================================================
-
-updateExpiryFields();
-
-
-if (
-    authToken &&
-    sessionStorage.getItem(
-        "medicineTrackerSession"
-    ) === "true"
-) {
-
-    showDashboard();
-
-} else if (authToken) {
-
-    showDashboard();
-
-} else {
-
-    showLogin();
-}
+    }
+);
