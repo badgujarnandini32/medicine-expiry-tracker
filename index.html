@@ -243,13 +243,11 @@
             <div class="nav-links">
 
                 <button
-    class="nav-item active"
-    data-view="dashboard"
->
-    <span style="color:red !important; display:inline !important;">
-        test123
-    </span>
-</button>
+                    class="nav-item active"
+                    data-view="dashboard"
+                >
+                    Dashboard
+                </button>
 
 
                 <button
@@ -748,7 +746,7 @@
         // window.MEDICINE_API_BASE_URL = "https://your-backend-url.onrender.com";
 
         window.MEDICINE_API_BASE_URL =
-    "https://medicine-expiry-tracker-13hx.onrender.com";
+            window.MEDICINE_API_BASE_URL || "";
     </script>
 
 
